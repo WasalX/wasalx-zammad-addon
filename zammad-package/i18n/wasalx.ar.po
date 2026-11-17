@@ -2,7 +2,7 @@
 # Copyright (c) 2026 Mohammed Altoyan <mohammedaltoyan@gmail.com>
 msgid ""
 msgstr ""
-"Project-Id-Version: WasalX 0.5.83\n"
+"Project-Id-Version: WasalX 0.5.84\n"
 "Language: ar\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
