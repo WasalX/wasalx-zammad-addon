@@ -1,0 +1,9 @@
+<div>Your follow-up for <b>(#{config.ticket_hook}#{ticket.number})</b> has been received and will be reviewed by our support staff.</div>
+<br/>
+<div>To provide additional information, please reply to this email or click on the following link:
+<a href="#{config.http_type}://#{config.fqdn}/#ticket/zoom/#{ticket.id}">#{config.http_type}://#{config.fqdn}/#ticket/zoom/#{ticket.id}</a>
+</div>
+<br/>
+<div>Your #{config.product_name} Team</div>
+<br/>
+<div><i><a href="https://zammad.com">Zammad</a>, your customer support system</i></div>

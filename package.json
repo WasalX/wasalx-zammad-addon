@@ -1,0 +1,13 @@
+{
+  "name": "@wasalx/zammad-addon",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "license": "AGPL-3.0-only",
+  "packageManager": "pnpm@11.16.0",
+  "scripts": {
+    "zammad:package": "node scripts/build-zammad-package.mjs",
+    "test:package": "node --experimental-strip-types --test tests/zammad-package.test.ts",
+    "test:components": "pnpm --filter @wasalx/zammad-frontend-test test"
+  }
+}

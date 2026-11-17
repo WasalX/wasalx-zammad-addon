@@ -1,0 +1,32 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+class Api::V1::WasalxController < ApplicationController
+# Copyright (c) 2026 Mohammed Altoyan <mohammedaltoyan@gmail.com>
+  # Authenticate the caller here, then authorize the concrete ticket in each
+  # action below. `authenticate_and_authorize!` also asks Pundit for a
+  # controller policy; package controllers do not own one and that would turn
+  # an otherwise authorized agent request into a 500 before ticket checks run.
+  prepend_before_action :authentication_check
+
+  def panel
+    ticket = Ticket.find(params[:ticket_id])
+    authorize!(ticket, :agent_read_access?)
+
+    render json: Service::Ticket::WasalxPanel.execute(ticket: ticket, current_user: current_user)
+  end
+
+  def retry_delivery
+    allowed = current_user.permissions?('ticket.agent.wasalx_retry') || current_user.permissions?('admin')
+    raise Exceptions::Forbidden, __('Not authorized') if !allowed
+
+    ticket = Ticket.find(params[:ticket_id])
+    authorize!(ticket, :agent_update_access?)
+
+    response = Wasalx::Client.post(
+      '/internal/v1/zammad/retry',
+      { tenant_id: ENV.fetch('WASALX_TENANT_ID'), ticket_id: ticket.id, actor_id: current_user.id,
+        article_id: params[:article_id], idempotency_key: "retry:#{ticket.id}:#{params[:article_id]}" },
+      scope: 'zammad:retry'
+    )
+    render json: response, status: :accepted
+  end
+end

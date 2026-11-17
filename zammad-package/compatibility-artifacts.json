@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "artifacts": {
+    "0.5.36": {
+      "path": "build/zammad/wasalx-0.5.36.zpm",
+      "mode": "100644",
+      "sha256": "837436d8f81c7e7df82683e52274ee76794261d5155411ea4728d9dd9071e0f2",
+      "provenance": "sanitized compatibility fixture; not the immutable historical release artifact"
+    },
+    "0.5.13": {
+      "path": "build/zammad/wasalx-0.5.13.zpm",
+      "mode": "100644",
+      "sha256": "56e7e165adf1700cd277587a62f2a4a6544eb256b35feef34fe45a1b24d2fd4d",
+      "provenance": "sanitized compatibility fixture; not the immutable historical release artifact"
+    }
+  }
+}

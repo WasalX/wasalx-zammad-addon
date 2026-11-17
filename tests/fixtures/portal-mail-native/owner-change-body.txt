@@ -1,0 +1,7 @@
+<p>The owner of ticket (Ticket##{ticket.number}) has changed and is now "#{ticket.owner.firstname} #{ticket.owner.lastname}".<p>
+<br/>
+<p>To provide additional information, please reply to this email or click on the following link:
+<a href="#{config.http_type}://#{config.fqdn}/#ticket/zoom/#{ticket.id}">#{config.http_type}://#{config.fqdn}/#ticket/zoom/#{ticket.id}</a>
+</p>
+<br/>
+<p><i><a href="https://zammad.com">Zammad</a>, your customer support system</i></p>

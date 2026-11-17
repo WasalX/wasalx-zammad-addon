@@ -1,0 +1,23 @@
+{
+  "name": "@wasalx/zammad-frontend-test",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run --config vitest.config.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@formkit/core": "2.0.0",
+    "@formkit/rules": "2.0.0",
+    "@formkit/validation": "2.0.0",
+    "@vitejs/plugin-vue": "6.0.8",
+    "@vue/test-utils": "2.4.11",
+    "axe-core": "4.13.0",
+    "jsdom": "29.0.1",
+    "typescript": "5.9.3",
+    "vite": "8.2.4",
+    "vitest": "4.1.11",
+    "vue": "3.5.42"
+  }
+}

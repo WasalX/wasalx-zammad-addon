@@ -1,0 +1,32 @@
+/* SPDX-License-Identifier: AGPL-3.0-only */
+/* Copyright (c) 2026 Mohammed Altoyan <mohammedaltoyan@gmail.com> */
+/* Use retained production hooks: the native build removes test ID attributes. */
+/* Native CLOSED state: retain the green cue and make its small text readable. */
+.ticket-detail-grid-full .cursor-default[role='group'].bg-green-300 {
+  color: #166534;
+  background-color: #bbe0cb;
+}
+
+[data-theme='dark'] .ticket-detail-grid-full .cursor-default[role='group'].bg-green-300 {
+  color: #bbf7d0;
+  background-color: #173526;
+}
+
+@media (forced-colors: active) {
+  .ticket-detail-grid-full .cursor-default[role='group'].bg-green-300,
+  [data-theme='dark'] .ticket-detail-grid-full .cursor-default[role='group'].bg-green-300 {
+    color: CanvasText;
+    background-color: Canvas;
+  }
+}
+
+/* Native anonymous OpenID login: retain its blue surface and readable text. */
+section.mt-2\.5.w-full > div.flex.flex-wrap.gap-2 > form:is([action='/auth/openid_connect'], [action^='/auth/openid_connect?']) > button.bg-blue-800 {
+  color: #000;
+}
+
+@media (forced-colors: active) {
+  section.mt-2\.5.w-full > div.flex.flex-wrap.gap-2 > form:is([action='/auth/openid_connect'], [action^='/auth/openid_connect?']) > button.bg-blue-800 {
+    color: ButtonText;
+  }
+}

@@ -1,0 +1,32 @@
+packages:
+  - "tests/zammad-sidebar-component"
+
+allowBuilds:
+  esbuild: true
+  sharp: true
+  workerd: true
+  msgpackr-extract: true
+  # OTel's protobuf serializer is pure JavaScript at runtime. Keep third-party
+  # lifecycle scripts disabled; this value also makes pnpm's policy explicit.
+  protobufjs: false
+
+patchedDependencies:
+  braces@3.0.3: patches/braces@3.0.3.patch
+  image-size@2.0.2: patches/image-size@2.0.2.patch
+  storybook@10.6.2: patches/storybook@10.6.2.patch
+
+overrides:
+  source-map-js@1.2.1: 1.2.2
+  '@grpc/grpc-js@1.14.4': 1.14.5
+  undici@7.29.0: 7.30.1
+  # Nest pins Fastify separately; both callers must use the patched release.
+  fastify: 5.12.5
+  fast-uri@3.1.7: 3.1.8
+  fast-uri@4.1.4: 4.1.5
+  # The legacy Drizzle loader uses esbuild only for transform/build, not serve.
+  '@esbuild-kit/core-utils>esbuild': 0.25.12
+  find-my-way: 9.7.0
+  js-yaml: 4.3.2
+  sharp: 0.35.5
+  zod@4.4.3: 4.6.6
+  systeminformation: 5.33.16

@@ -1,0 +1,403 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# Copyright (c) 2026 Mohammed Altoyan <mohammedaltoyan@gmail.com>
+msgid ""
+msgstr ""
+"Project-Id-Version: WasalX 0.5.32\n"
+"Language: ar\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=6; plural=n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : n%100>=3 && n%100<=10 ? 3 : n%100>=11 && n%100<=99 ? 4 : 5;\n"
+
+msgid "Action required"
+msgstr "يلزم اتخاذ إجراء"
+
+msgid "Administrative access is available to authorized supervisors."
+msgstr "تتوفر صلاحيات الإدارة للمشرفين المخوّلين."
+
+msgid "All"
+msgstr "الكل"
+
+msgid "All Accessible"
+msgstr "كل المجموعات المتاحة"
+
+msgid "Attachment could not be removed. Try again."
+msgstr "تعذّرت إزالة المرفق. حاول مرة أخرى."
+
+msgid "Attachment could not be uploaded."
+msgstr "تعذّر رفع المرفق."
+
+msgid "Attachment delivery needs review."
+msgstr "يجب مراجعة حالة تسليم المرفق."
+
+msgid "Attachment is no longer available."
+msgstr "لم يعد المرفق متاحًا."
+
+msgid "Attachment is unavailable."
+msgstr "المرفق غير متاح."
+
+msgid "Attachment is waiting for the previous message."
+msgstr "ينتظر المرفق إرسال الرسالة السابقة."
+
+msgid "Attachment is waiting to retry."
+msgstr "ينتظر المرفق إعادة المحاولة."
+
+msgid "Attachment was not sent."
+msgstr "لم يُرسل المرفق."
+
+msgid "Attachments are unavailable for this group."
+msgstr "المرفقات غير متاحة لهذه المجموعة."
+
+msgid "Audio"
+msgstr "صوت"
+
+msgid "Blocked"
+msgstr "محظور"
+
+msgid "Choose a group to view its conversation."
+msgstr "اختر مجموعة لعرض محادثتها."
+
+msgid "Connected"
+msgstr "متصل"
+
+msgid "Connection"
+msgstr "الاتصال"
+
+msgid "Connection checked"
+msgstr "تم التحقق من الاتصال"
+
+msgid "Create a ticket from this message"
+msgstr "إنشاء تذكرة من هذه الرسالة"
+
+msgid "Delivered"
+msgstr "تم التسليم"
+
+msgid "Delivery"
+msgstr "التسليم"
+
+msgid "Delivery could not be confirmed. Retry the unchanged message safely; it will not be sent twice."
+msgstr "تعذّر تأكيد التسليم. يمكنك إعادة محاولة الرسالة دون تغيير بأمان؛ لن تُرسل مرتين."
+
+msgid "Delivery could not be confirmed. Check the WhatsApp group before retrying to avoid a duplicate message."
+msgstr "تعذّر تأكيد التسليم. تحقق من مجموعة واتساب قبل إعادة المحاولة لتجنب إرسال رسالة مكررة."
+
+msgid "Delivery needs attention"
+msgstr "يحتاج التسليم إلى متابعة"
+
+msgid "Delivery needs review"
+msgstr "يجب مراجعة التسليم"
+
+msgid "Delivery was queued for retry."
+msgstr "أُضيف التسليم إلى قائمة إعادة المحاولة."
+
+msgid "Document"
+msgstr "مستند"
+
+msgid "Download file"
+msgstr "تنزيل الملف"
+
+msgid "Earlier messages could not be loaded. Try again."
+msgstr "تعذّر تحميل الرسائل السابقة. حاول مرة أخرى."
+
+msgid "Edited"
+msgstr "معدّلة"
+
+msgid "Failed"
+msgstr "فشل"
+
+msgid "Finding participants…"
+msgstr "جارٍ البحث عن المشاركين…"
+
+msgid "Group conversation"
+msgstr "محادثة المجموعة"
+
+msgid "Group filters"
+msgstr "عوامل تصفية المجموعات"
+
+msgid "History starts when capture is enabled for this group."
+msgstr "يبدأ السجل عند تفعيل حفظ المحادثة لهذه المجموعة."
+
+msgid "Last activity"
+msgstr "آخر نشاط"
+
+msgid "Link message"
+msgstr "ربط الرسالة"
+
+msgid "Link this message to a ticket"
+msgstr "ربط هذه الرسالة بتذكرة"
+
+msgid "Link to ticket"
+msgstr "ربط بتذكرة"
+
+msgid "Linked message context could not be loaded. Try again."
+msgstr "تعذّر تحميل سياق الرسالة المرتبطة. حاول مرة أخرى."
+
+msgid "Load earlier messages"
+msgstr "تحميل الرسائل السابقة"
+
+msgid "Load more tickets"
+msgstr "تحميل المزيد من التذاكر"
+
+msgid "Loading WasalX operations"
+msgstr "جارٍ تحميل عمليات WasalX"
+
+msgid "Mention a participant"
+msgstr "الإشارة إلى مشارك"
+
+msgid "Message could not be linked. Check the ticket number and try again."
+msgstr "تعذّر ربط الرسالة. تحقق من رقم التذكرة وحاول مرة أخرى."
+
+msgid "Message could not be sent. Check it and try again."
+msgstr "تعذّر إرسال الرسالة. راجعها وحاول مرة أخرى."
+
+msgid "Message deleted"
+msgstr "تم حذف الرسالة"
+
+msgid "Messaging is unavailable until the WhatsApp connection recovers."
+msgstr "المراسلة غير متاحة حتى يعود اتصال واتساب."
+
+msgid "Microphone access was not available. You can attach an audio file instead."
+msgstr "تعذّر الوصول إلى الميكروفون. يمكنك إرفاق ملف صوتي بدلًا من ذلك."
+
+msgid "Mobile unavailable from WhatsApp"
+msgstr "رقم الجوال غير متاح من واتساب"
+
+msgid "More tickets could not be loaded. Try again."
+msgstr "تعذّر تحميل المزيد من التذاكر. حاول مرة أخرى."
+
+msgid "My Groups"
+msgstr "مجموعاتي"
+
+msgid "My Team"
+msgstr "فريقي"
+
+msgid "Needs attention"
+msgstr "يحتاج إلى متابعة"
+
+msgid "New messages"
+msgstr "رسائل جديدة"
+
+msgid "No captured messages yet"
+msgstr "لا توجد رسائل محفوظة حتى الآن"
+
+msgid "No groups in this view."
+msgstr "لا توجد مجموعات في هذا العرض."
+
+msgid "No matching participants."
+msgstr "لا يوجد مشاركون مطابقون."
+
+msgid "No tickets in this view."
+msgstr "لا توجد تذاكر في هذا العرض."
+
+msgid "Not observed"
+msgstr "لم يتم رصده"
+
+msgid "Not sent"
+msgstr "لم تُرسل"
+
+msgid "Open in WasalX"
+msgstr "فتح في WasalX"
+
+msgid "Open ticket"
+msgstr "فتح التذكرة"
+
+msgid "Participant"
+msgstr "مشارك"
+
+msgid "Paused"
+msgstr "متوقف مؤقتًا"
+
+msgid "Preparing"
+msgstr "جارٍ التحضير"
+
+msgid "Preparing attachment…"
+msgstr "جارٍ تجهيز المرفق…"
+
+msgid "Provisioning"
+msgstr "جارٍ الإعداد"
+
+msgid "Queued"
+msgstr "في قائمة الانتظار"
+
+msgid "Queueing retry…"
+msgstr "جارٍ إضافة إعادة المحاولة…"
+
+msgid "Quote"
+msgstr "اقتباس"
+
+msgid "Quoted message"
+msgstr "الرسالة المقتبسة"
+
+msgid "Quoted message unavailable"
+msgstr "الرسالة المقتبسة غير متاحة"
+
+msgid "Ready to retry"
+msgstr "جاهز لإعادة المحاولة"
+
+msgid "Record voice"
+msgstr "تسجيل صوتي"
+
+msgid "Recording…"
+msgstr "جارٍ التسجيل…"
+
+msgid "Removing…"
+msgstr "جارٍ الإزالة…"
+
+msgid "Reply on WhatsApp"
+msgstr "الرد عبر واتساب"
+
+msgid "Replying to"
+msgstr "ردًا على"
+
+msgid "Retry delivery"
+msgstr "إعادة محاولة التسليم"
+
+msgid "Retry status check"
+msgstr "إعادة التحقق من الحالة"
+
+msgid "Retrying…"
+msgstr "جارٍ إعادة المحاولة…"
+
+msgid "Return to latest"
+msgstr "العودة إلى الأحدث"
+
+msgid "Revoked"
+msgstr "ملغى"
+
+msgid "Saving…"
+msgstr "جارٍ الحفظ…"
+
+msgid "Send on WhatsApp"
+msgstr "الإرسال عبر واتساب"
+
+msgid "Sent"
+msgstr "تم الإرسال"
+
+msgid "Sent from WhatsApp"
+msgstr "أُرسلت عبر واتساب"
+
+msgid "Sent through"
+msgstr "أُرسلت عبر"
+
+msgid "Show linked message"
+msgstr "عرض الرسالة المرتبطة"
+
+msgid "Show triggering message"
+msgstr "عرض الرسالة التي أنشأت التذكرة"
+
+msgid "Skip to message composer"
+msgstr "الانتقال إلى محرر الرسالة"
+
+msgid "Stop recording"
+msgstr "إيقاف التسجيل"
+
+msgid "Support conversations and related tickets in one place."
+msgstr "محادثات الدعم والتذاكر المرتبطة في مكان واحد."
+
+msgid "Support team"
+msgstr "فريق الدعم"
+
+msgid "The delivery could not be queued for retry."
+msgstr "تعذّرت إضافة التسليم إلى قائمة إعادة المحاولة."
+
+msgid "These files exceed the total upload limit for this group."
+msgstr "تتجاوز هذه الملفات الحد الإجمالي للرفع لهذه المجموعة."
+
+msgid "This delivery can be safely queued for another attempt."
+msgstr "يمكن إضافة هذا التسليم بأمان إلى محاولة أخرى."
+
+msgid "This file type or size is not supported for this group."
+msgstr "نوع هذا الملف أو حجمه غير مدعوم لهذه المجموعة."
+
+msgid "Ticket could not be created. Check the details and try again."
+msgstr "تعذّر إنشاء التذكرة. راجع التفاصيل وحاول مرة أخرى."
+
+msgid "Ticket groups could not be loaded."
+msgstr "تعذّر تحميل مجموعات التذاكر."
+
+msgid "Ticket number"
+msgstr "رقم التذكرة"
+
+msgid "Ticket status"
+msgstr "حالة التذكرة"
+
+msgid "Ticket updated."
+msgstr "تم تحديث التذكرة."
+
+msgid "Type RETRY to confirm"
+msgstr "اكتب RETRY للتأكيد"
+
+msgid "Unassigned"
+msgstr "غير معيّنة"
+
+msgid "Unavailable"
+msgstr "غير متاح"
+
+msgid "Unread messages"
+msgstr "الرسائل غير المقروءة"
+
+msgid "Unsupported message"
+msgstr "رسالة غير مدعومة"
+
+msgid "Voice recording is not supported in this browser."
+msgstr "التسجيل الصوتي غير مدعوم في هذا المتصفح."
+
+msgid "Voice recording is unavailable for this group."
+msgstr "التسجيل الصوتي غير متاح لهذه المجموعة."
+
+msgid "We could not verify this WhatsApp connection. Delivery updates may be delayed."
+msgstr "تعذّر التحقق من اتصال واتساب هذا. قد تتأخر تحديثات التسليم."
+
+msgid "Waiting for authentication"
+msgstr "بانتظار المصادقة"
+
+msgid "Waiting for previous message"
+msgstr "بانتظار الرسالة السابقة"
+
+msgid "WasalX activity"
+msgstr "نشاط WasalX"
+
+msgid "WasalX operations"
+msgstr "عمليات WasalX"
+
+msgid "WasalX returned an invalid status."
+msgstr "أعاد WasalX حالة غير صالحة."
+
+msgid "WasalX status could not be loaded."
+msgstr "تعذّر تحميل حالة WasalX."
+
+msgid "WasalX status is unavailable"
+msgstr "حالة WasalX غير متاحة"
+
+msgid "WhatsApp Groups"
+msgstr "مجموعات واتساب"
+
+msgid "WhatsApp Groups is unavailable"
+msgstr "مجموعات واتساب غير متاحة"
+
+msgid "WhatsApp ID"
+msgstr "معرّف واتساب"
+
+msgid "WhatsApp contact"
+msgstr "جهة اتصال واتساب"
+
+msgid "WhatsApp group"
+msgstr "مجموعة واتساب"
+
+msgid "WhatsApp group could not be loaded."
+msgstr "تعذّر تحميل مجموعة واتساب."
+
+msgid "WhatsApp groups"
+msgstr "مجموعات واتساب"
+
+msgid "WhatsApp groups could not be loaded."
+msgstr "تعذّر تحميل مجموعات واتساب."
+
+msgid "Write a group message"
+msgstr "اكتب رسالة للمجموعة"
+
+msgid "You"
+msgstr "أنت"
+
+msgid "You have reached the attachment limit for this group."
+msgstr "لقد وصلت إلى الحد الأقصى للمرفقات لهذه المجموعة."
