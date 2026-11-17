@@ -1,4 +1,4 @@
-Zammad integration sources and native mail fixtures: AGPL-3.0-only. The full license is COPYING; existing copyright and license headers remain intact.
+Zammad integration sources and native mail fixtures: AGPL-3.0-only. The full license is LICENSE; existing copyright and license headers remain intact.
 Current preferred-form source and its build script are included. historical-source/index.json identifies the readable source of every retained package; historical-source/rebuild.mjs reconstructs and verifies each exact sanitized package.
 
 The following non-commentable files added with the tests are covered by this repository's AGPL-3.0-only license:
