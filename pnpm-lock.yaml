@@ -17,7 +17,6 @@ overrides:
   systeminformation: 5.33.16
 patchedDependencies:
   braces@3.0.3: cecdb90ea3f216ffb13f31d757e9e26239b040179ba9235326e1a6041cb3b055
-  image-size@2.0.2: 7c89ec6d1c08d3b56283f29cafff78710fc3b86b0623eb3f1112f4df4d2b7c66
   storybook@10.6.2: 341155572bd17e73f72ae830fc8f006fec6a6817b0c07d6e36b30e3ab1d02e6a
 importers:
   .: {}
@@ -4136,12 +4135,6 @@ packages:
       integrity: sha512-BAg6QkE8W+TuQLrrw0Ugr7HegXduRuuj8/ti2kSOc+jz1dmx8/WNcjr6XGnq5YpDWxFwwaavqD0+jIUOKelTsw==
     engines:
       node: ">= 4"
-  image-size@2.0.2:
-    resolution:
-      integrity: sha512-IRqXKlaXwgSMAMtpNzZa1ZAe8m+Sa1770Dhk8VkSsP9LS+iHD62Zd8FQKs8fbPiagBE7BzoFX23cxFnwshpV6w==
-    engines:
-      node: ">=16.x"
-    hasBin: true
   import-fresh@3.3.1:
     resolution:
       integrity: sha512-TR3KfrTZTYLPB6jUjfx6MF9WcWrHL9su5TObK4ZkYgBdWKPOFoSoQIdEuTuR82pmtxH2spWG9h6etwfr1pLBqQ==
@@ -5726,27 +5719,6 @@ packages:
       integrity: sha512-TQ5pAGhd5whStmqWvYF4OjQROlmv9SMFVt37qoCBdqRffuuklWYQlCNnEs2ZaIBD1kZRNnikiZOS1eqgkar0iw==
     engines:
       node: ">= 0.10"
-  vinext@1.0.0-beta.5:
-    resolution:
-      integrity: sha512-c0I1UB70/pGwD9y4/iXWrGfz/LnowSbkQpUw+lK9t08tes5WHX7Vl0sZAY4MIzGaVCyvrD4/xZo7HWpMje6SwA==
-    engines:
-      node: ">=22"
-    hasBin: true
-    peerDependencies:
-      "@mdx-js/rollup": ^3.0.0
-      "@vitejs/plugin-react": ^5.1.4 || ^6.0.0
-      "@vitejs/plugin-rsc": ^0.5.26
-      react: ^19.2.6
-      react-dom: ^19.2.6
-      react-server-dom-webpack: ^19.2.6
-      vite: ^8.0.0
-    peerDependenciesMeta:
-      "@mdx-js/rollup":
-        optional: true
-      "@vitejs/plugin-rsc":
-        optional: true
-      react-server-dom-webpack:
-        optional: true
   vite-plugin-commonjs@0.10.4:
     resolution:
       integrity: sha512-eWQuvQKCcx0QYB5e5xfxBNjQKyrjEWZIR9UOkOV6JAgxVhtbZvCOF+FNC2ZijBJ3U3Px04ZMMyyMyFBVWIJ5+g==
@@ -8823,7 +8795,6 @@ snapshots:
   ieee754@1.2.1: {}
   ignore@5.3.2: {}
   ignore@7.0.6: {}
-  image-size@2.0.2(patch_hash=7c89ec6d1c08d3b56283f29cafff78710fc3b86b0623eb3f1112f4df4d2b7c66): {}
   import-fresh@3.3.1:
     dependencies:
       parent-module: 1.0.1
@@ -9942,25 +9913,6 @@ snapshots:
     dependencies:
       react: 19.2.9
   validator@13.15.35: {}
-  vinext@1.0.0-beta.5(@vitejs/plugin-react@6.0.2(vite@8.2.4(@types/node@22.19.19)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.49.2)(tsx@4.23.11)(yaml@2.9.0)))(@vitejs/plugin-rsc@0.5.38(react-dom@19.2.9(react@19.2.9))(react-server-dom-webpack@19.2.9(react-dom@19.2.9(react@19.2.9))(react@19.2.9)(webpack@5.109.2(esbuild@0.28.1)(lightningcss@1.33.0)(postcss@8.5.26)))(react@19.2.9)(vite@8.2.4(@types/node@22.19.19)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.49.2)(tsx@4.23.11)(yaml@2.9.0)))(react-dom@19.2.9(react@19.2.9))(react-server-dom-webpack@19.2.9(react-dom@19.2.9(react@19.2.9))(react@19.2.9)(webpack@5.109.2(esbuild@0.28.1)(lightningcss@1.33.0)(postcss@8.5.26)))(react@19.2.9)(vite@8.2.4(@types/node@22.19.19)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.49.2)(tsx@4.23.11)(yaml@2.9.0)):
-    dependencies:
-      "@unpic/react": 1.0.2(react-dom@19.2.9(react@19.2.9))(react@19.2.9)
-      "@vercel/og": 0.8.6
-      "@vinext/types": 1.0.0-beta.2
-      "@vitejs/plugin-react": 6.0.2(vite@8.2.4(@types/node@22.19.19)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.49.2)(tsx@4.23.11)(yaml@2.9.0))
-      image-size: 2.0.2(patch_hash=7c89ec6d1c08d3b56283f29cafff78710fc3b86b0623eb3f1112f4df4d2b7c66)
-      ipaddr.js: 2.5.0
-      magic-string: 0.30.21
-      react: 19.2.9
-      react-dom: 19.2.9(react@19.2.9)
-      vite: 8.2.4(@types/node@22.19.19)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.49.2)(tsx@4.23.11)(yaml@2.9.0)
-      vite-plugin-commonjs: 0.10.4
-      web-vitals: 4.2.4
-    optionalDependencies:
-      "@vitejs/plugin-rsc": 0.5.38(react-dom@19.2.9(react@19.2.9))(react-server-dom-webpack@19.2.9(react-dom@19.2.9(react@19.2.9))(react@19.2.9)(webpack@5.109.2(esbuild@0.28.1)(lightningcss@1.33.0)(postcss@8.5.26)))(react@19.2.9)(vite@8.2.4(@types/node@22.19.19)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.49.2)(tsx@4.23.11)(yaml@2.9.0))
-      react-server-dom-webpack: 19.2.9(react-dom@19.2.9(react@19.2.9))(react@19.2.9)(webpack@5.109.2(esbuild@0.28.1)(lightningcss@1.33.0)(postcss@8.5.26))
-    transitivePeerDependencies:
-      - next
   vite-plugin-commonjs@0.10.4:
     dependencies:
       acorn: 8.18.0

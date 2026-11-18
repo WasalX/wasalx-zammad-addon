@@ -12,7 +12,6 @@ allowBuilds:
 
 patchedDependencies:
   braces@3.0.3: patches/braces@3.0.3.patch
-  image-size@2.0.2: patches/image-size@2.0.2.patch
   storybook@10.6.2: patches/storybook@10.6.2.patch
 
 overrides:
