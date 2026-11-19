@@ -1,0 +1,3 @@
+/CODEOWNERS @WasalX/maintainers
+/.github/ @WasalX/maintainers
+/pnpm-lock.yaml @WasalX/maintainers
