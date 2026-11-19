@@ -30,6 +30,8 @@ jobs:
             curl -fsS -o "$input" "$platform/$input"
           done
       - run: pnpm run zammad:package
+      - name: Committed packages are unchanged
+        run: git diff --exit-code -- build/zammad
       - run: pnpm run test:package
       - name: Run standalone Ruby contracts
         run: |
