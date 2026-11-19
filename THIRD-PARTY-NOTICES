@@ -3,8 +3,6 @@ Current preferred-form source and its build script are included. historical-sour
 
 The following non-commentable files added with the tests are covered by this repository's AGPL-3.0-only license:
 - package.json
-- patches/braces@3.0.3.patch
-- patches/storybook@10.6.2.patch
 - pnpm-lock.yaml
 - pnpm-workspace.yaml
 - tests/zammad-sidebar-component/package.json
