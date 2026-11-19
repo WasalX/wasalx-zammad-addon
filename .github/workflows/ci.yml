@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  pull_request:
+  merge_group:
+  push: {branches: [main]}
+
+permissions: {contents: read}
+
+jobs:
+  ci-gate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: {persist-credentials: false}
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with: {node-version: '24.13.1', package-manager-cache: false}
+      - name: Install test prerequisites
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+          if ! ruby -rminitest -e 'puts RUBY_VERSION'; then
+            sudo apt-get update && sudo apt-get install -y ruby ruby-minitest
+          fi
+          # The package suite uses platform-owned contract inputs.
+          platform=https://raw.githubusercontent.com/WasalX/wasalx-platform/5d87b78af86030d6f615f205a015664cbdc52a4d
+          for input in infra/docker/full/zammad/{install-package,verify-package}.rb \
+            tests/fixtures/native-session-state-contract.rb; do
+            curl -fsS -o "$input" "$platform/$input"
+          done
+      - run: pnpm run zammad:package
+      - name: Committed packages are unchanged
+        run: git diff --exit-code -- build/zammad
+      - run: pnpm run test:package
+      - name: Run standalone Ruby contracts
+        run: |
+          ruby tests/portal-delegation-test.rb
+          ruby tests/portal-mail-delivery-contract.rb
+          ruby tests/zammad-redis-tls.test.rb
+      - run: pnpm run test:components --maxWorkers=4 --no-file-parallelism
+      - run: pnpm --filter @wasalx/zammad-frontend-test run typecheck
