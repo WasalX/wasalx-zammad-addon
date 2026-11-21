@@ -7,7 +7,6 @@ settings:
 overrides:
   source-map-js@1.2.1: 1.2.2
   '@grpc/grpc-js@1.14.4': 1.14.5
-  undici@7.29.0: 7.30.1
   '@vue/test-utils>js-beautify': '-'
   '@esbuild-kit/core-utils>esbuild': 0.25.12
   find-my-way: 9.7.0
