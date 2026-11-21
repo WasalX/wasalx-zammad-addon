@@ -1,0 +1,40 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    open-pull-requests-limit: 2
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 3
+    ignore:
+      # Keep shared TypeScript and OpenTelemetry holds aligned with the platform.
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@opentelemetry/*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@opentelemetry/*"
+        versions: [">=0.300.0 <1.0.0"]
+    groups:
+      npm-minor-and-patch:
+        patterns: ['*']
+        update-types: [minor, patch]
+      npm-security:
+        applies-to: security-updates
+        patterns: ['*']
+  - package-ecosystem: github-actions
+    directory: /
+    open-pull-requests-limit: 2
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 3
+    groups:
+      github-actions-minor-and-patch:
+        patterns: ['*']
+        update-types: [minor, patch]
+      github-actions-security:
+        applies-to: security-updates
+        patterns: ['*']
