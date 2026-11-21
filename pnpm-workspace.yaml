@@ -13,7 +13,6 @@ allowBuilds:
 overrides:
   source-map-js@1.2.1: 1.2.2
   '@grpc/grpc-js@1.14.4': 1.14.5
-  undici@7.29.0: 7.30.1
   # Vue Test Utils bundles the HTML formatter used by wrapper.html().
   '@vue/test-utils>js-beautify': '-'
   # The legacy Drizzle loader uses esbuild only for transform/build, not serve.

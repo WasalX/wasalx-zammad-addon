@@ -100,6 +100,10 @@ describe('native desktop/mobile accessibility overlay', () => {
       const styles = getComputedStyle(document.getElementById('closed')!)
       const values = [luminance(styles.color), luminance(styles.backgroundColor)].sort((a, b) => b - a)
       expect((values[0] + 0.05) / (values[1] + 0.05)).toBeGreaterThanOrEqual(4.5)
+      if (theme === 'dark') {
+        expect(styles.backgroundColor).toBe('rgb(23, 53, 38)')
+        expect(styles.color).toBe('rgb(187, 247, 208)')
+      }
     }
     expect(document.querySelector('[data-test-id]')).toBeNull() // Production transform strips test IDs.
     for (const id of ['unrelated', 'inside-unrelated']) {
