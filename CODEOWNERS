@@ -1,3 +1,5 @@
 /CODEOWNERS @WasalX/maintainers
 /.github/ @WasalX/maintainers
 /pnpm-lock.yaml @WasalX/maintainers
+/AGENTS.md @WasalX/maintainers
+/CLAUDE.md @WasalX/maintainers
