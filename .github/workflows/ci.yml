@@ -7,6 +7,10 @@ on:
 
 permissions: {contents: read}
 
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   ci-gate:
     runs-on: ubuntu-24.04
@@ -16,9 +20,19 @@ jobs:
         with: {persist-credentials: false}
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with: {node-version: '24.22.3', package-manager-cache: false}
-      - name: Install test prerequisites
+      - name: Enable pinned pnpm
         run: |
           corepack enable
+          store=$(pnpm store path --silent)
+          echo "PNPM_STORE_PATH=$store" >> "$GITHUB_ENV"
+      - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        id: pnpm-cache
+        with:
+          path: ${{ env.PNPM_STORE_PATH }}
+          key: pnpm-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pnpm-lock.yaml', 'pnpm-workspace.yaml', 'package.json', 'patches/**') }}
+          restore-keys: pnpm-${{ runner.os }}-${{ runner.arch }}-
+      - name: Install test prerequisites
+        run: |
           pnpm install --frozen-lockfile
           if ! ruby -rminitest -e 'puts RUBY_VERSION'; then
             sudo apt-get update && sudo apt-get install -y ruby ruby-minitest
@@ -29,6 +43,11 @@ jobs:
             tests/fixtures/native-session-state-contract.rb; do
             curl -fsS -o "$input" "$platform/$input"
           done
+      - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.pnpm-cache.outputs.cache-hit != 'true'
+        with:
+          path: ${{ env.PNPM_STORE_PATH }}
+          key: ${{ steps.pnpm-cache.outputs.cache-primary-key }}
       - run: pnpm run zammad:package
       - name: Committed packages are unchanged
         run: git diff --exit-code -- build/zammad
