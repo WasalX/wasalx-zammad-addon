@@ -12,6 +12,10 @@
 - Follow the [platform agent instructions](https://github.com/WasalX/wasalx-platform/blob/main/AGENTS.md) and [platform delivery rules](https://github.com/WasalX/wasalx-platform/blob/main/DELIVERY.md) for shared rules.
 - Follow the [security policy](SECURITY.md) to report vulnerabilities privately.
 
+## Risk paths
+
+Require the [risk-path review](https://github.com/WasalX/wasalx-platform/blob/main/DELIVERY.md#branching-and-merging) for the high-risk paths listed in [CODEOWNERS](CODEOWNERS). Also review changes to package scripts that control required checks or production builds, and UI or API changes that alter what personal data is exposed or who can see it.
+
 ## Build and checks
 
 - Use the Node.js version set in [CI](.github/workflows/ci.yml) and the pnpm version pinned in [package.json](package.json). Run `corepack enable` and `pnpm install --frozen-lockfile`.
