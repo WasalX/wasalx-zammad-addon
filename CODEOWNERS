@@ -1,6 +1,8 @@
 # Merge gates
 /CODEOWNERS @WasalX/maintainers
 /.github/workflows/ @WasalX/maintainers
+/tests/ci-test-ownership.test.ts @WasalX/maintainers
+/pnpm-workspace.yaml @WasalX/maintainers
 
 # Migrations, deletion and retention
 /zammad-package/db/addon/wasalx/ @WasalX/maintainers
@@ -21,8 +23,10 @@
 /zammad-package/app/controllers/api/v1/wasalx_service_identities_controller.rb @WasalX/maintainers
 /zammad-package/app/models/wasalx_membership.rb @WasalX/maintainers
 /zammad-package/app/models/wasalx/mailbox_verification_smtp.rb @WasalX/maintainers
+/zammad-package/app/models/ticket/article/enqueue_communicate_wasalx_job.rb @WasalX/maintainers
 /zammad-package/app/services/service/ticket/article/type/wasalx_group_message/deliver.rb @WasalX/maintainers
 /zammad-package/app/jobs/communicate_wasalx_job.rb @WasalX/maintainers
+/zammad-package/app/services/service/ticket/wasalx_customer_close.rb @WasalX/maintainers
 /zammad-package/app/services/service/ticket/wasalx_panel.rb @WasalX/maintainers
 /zammad-package/app/services/service/ticket/wasalx_quoted_command.rb @WasalX/maintainers
 /zammad-package/lib/wasalx/bootstrap_settings.rb @WasalX/maintainers
@@ -38,6 +42,7 @@
 /zammad-package/lib/wasalx/portal_team_administration.rb @WasalX/maintainers
 /zammad-package/lib/wasalx/reply_preview.rb @WasalX/maintainers
 /zammad-package/lib/wasalx/required_smtp_tls.rb @WasalX/maintainers
+/zammad-package/lib/wasalx/routing_configuration.rb @WasalX/maintainers
 /zammad-package/lib/wasalx/service_identity.rb @WasalX/maintainers
 /zammad-package/lib/wasalx/session_*.rb @WasalX/maintainers
 
