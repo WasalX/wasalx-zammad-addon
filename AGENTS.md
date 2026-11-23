@@ -3,6 +3,7 @@
 ## Project facts
 
 - Repository [WasalX/wasalx-zammad-addon](https://github.com/WasalX/wasalx-zammad-addon). The main branch is `main`.
+- Other repos: [WasalX/wasalx-platform](https://github.com/WasalX/wasalx-platform) (primary)
 - The private [WasalX project board](https://github.com/orgs/WasalX/projects/1) holds the project brief.
 - [Add-on milestones](https://github.com/WasalX/wasalx-zammad-addon/milestones) are v0.1.0 due 2026-11-30 and v0.2.0 due 2026-12-14. Each ships with its matching platform tag.
 - Lead threads are WasalX Master, WasalX Delivery, and WasalX Design.
