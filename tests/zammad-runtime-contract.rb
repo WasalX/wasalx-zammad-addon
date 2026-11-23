@@ -2,7 +2,9 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 # Copyright (c) 2026 Mohammed Altoyan <mohammedaltoyan@gmail.com>
 
+require 'logger'
 require 'minitest/autorun'
+require 'stringio'
 
 ROOT = File.expand_path('..', __dir__)
 TENANT_ID = '10000000-0000-4000-8000-000000000001'
@@ -37,12 +39,15 @@ class WasalxMembership
 end
 
 class ApplicationJob
+  attr_accessor :arguments, :logger
+  attr_reader :retry_wait
+
   class << self
-    attr_accessor :enqueue_after_transaction_commit
+    attr_accessor :enqueue_after_transaction_commit, :log_arguments
     attr_reader :retry_contract
 
-    def retry_on(error, attempts:, wait:)
-      @retry_contract = { error: error, attempts: attempts, wait: wait }
+    def retry_on(error, attempts:, wait:, &exhausted)
+      @retry_contract = { error: error, attempts: attempts, wait: wait, exhausted: exhausted }
     end
 
     def perform_later(*arguments)
@@ -55,6 +60,24 @@ class ApplicationJob
 
     def reset_jobs!
       @enqueued_jobs = []
+    end
+  end
+
+  def job_id
+    'b13edf7f-838b-4409-b57b-d661a101c8ed'
+  end
+
+  def perform_attempt(payload, attempt)
+    self.arguments = [payload]
+    perform(payload)
+  rescue self.class.retry_contract.fetch(:error) => error
+    contract = self.class.retry_contract
+    if contract[:attempts] == :unlimited || attempt < contract[:attempts]
+      @retry_wait = contract.fetch(:wait).call(attempt)
+    elsif contract[:exhausted]
+      contract[:exhausted].call(self, error)
+    else
+      raise
     end
   end
 end
@@ -991,15 +1014,51 @@ class ZammadRuntimeContractTest < Minitest::Test
     end
 
     acknowledgement = perform_routing_decision(payload)
-    9.times do
+    9.times do |index|
       reloaded_payload = JSON.parse(JSON.generate(acknowledgement))
-      assert_raises(Wasalx::Client::TemporaryRequestFailed) { WasalxTicketRoutingJob.new.perform(reloaded_payload) }
+      job = WasalxTicketRoutingJob.new
+      job.perform_attempt(reloaded_payload, index + 1)
+      assert job.retry_wait.positive?
     end
-    WasalxTicketRoutingJob.new.perform(JSON.parse(JSON.generate(acknowledgement)))
+    WasalxTicketRoutingJob.new.perform_attempt(JSON.parse(JSON.generate(acknowledgement)), 10)
 
     assert_equal 10, acknowledgement_attempts
+    assert_equal 'SUCCEEDED', article.preferences['wasalx_email_routing_ack_state']
     assert_equal 1, ticket.updates.count { |update| update.key?(:wasalx_client_routing_version_id) }
     assert_equal 'MATCHED', ticket.wasalx_client_route_status
+  end
+
+  def test_email_routing_retry_exhaustion_records_a_terminal_outcome
+    article, ticket = register(FakeArticle.new.tap { |value| value.sender_id = 2; value.type_id = 12 })
+    invoke_routing_enqueue(article)
+    payload = WasalxTicketRoutingJob.enqueued_jobs.shift.fetch(0)
+    Wasalx::Client.error = Wasalx::Client::TemporaryRequestFailed.new('control API unavailable')
+    logs = StringIO.new
+    logger = Logger.new(logs)
+    attempts = ENV.fetch('WASALX_ROUTING_RETRY_ATTEMPTS', '10').to_i
+    base_delay = ENV.fetch('WASALX_ROUTING_RETRY_WAIT_SECONDS', '30').to_i
+
+    assert_equal false, WasalxTicketRoutingJob.log_arguments
+    (1..attempts).each do |attempt|
+      job = WasalxTicketRoutingJob.new
+      job.logger = logger
+      job.perform_attempt(JSON.parse(JSON.generate(payload)), attempt)
+      if attempt < attempts
+        assert_equal [attempt**2 * base_delay, 900].min, job.retry_wait
+        assert_equal 'PENDING', article.preferences['wasalx_email_routing_state']
+        assert_empty Ticket::Article.created_notes
+      else
+        assert_nil job.retry_wait
+      end
+    end
+
+    assert_equal attempts, Wasalx::Client.calls.length
+    assert_equal 'FAILED_TERMINAL', article.preferences['wasalx_email_routing_state']
+    assert_equal 'FAILED_TERMINAL', ticket.wasalx_client_route_status
+    assert_equal 1, Ticket::Article.created_notes.length
+    assert_includes logs.string, 'event=wasalx_ticket_routing_retry_exhausted job_id=b13edf7f-838b-4409-b57b-d661a101c8ed ticket_id=42 article_id=9'
+    refute_includes logs.string, 'control API unavailable'
+    refute_includes logs.string, payload.fetch('sender_email')
   end
 
   def test_only_public_agent_wasalx_articles_enqueue
@@ -1253,9 +1312,6 @@ class ZammadRuntimeContractTest < Minitest::Test
     assert_equal Wasalx::Client::TemporaryRequestFailed, state_contract.fetch(:error)
     assert_equal 8, state_contract.fetch(:attempts)
     assert_respond_to state_contract.fetch(:wait), :call
-    routing_contract = WasalxTicketRoutingJob.retry_contract
-    assert_equal Wasalx::Client::TemporaryRequestFailed, routing_contract.fetch(:error)
-    assert_equal :unlimited, routing_contract.fetch(:attempts)
   end
 
   def test_real_client_emits_idempotency_and_classifies_http_responses

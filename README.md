@@ -1,0 +1,12 @@
+## Email routing retries
+
+Set `WASALX_ROUTING_RETRY_ATTEMPTS` and `WASALX_ROUTING_RETRY_WAIT_SECONDS` in
+the Zammad job worker environment and restart the worker after changing either
+setting. Both accept positive integers. The attempt limit includes the first run.
+The base wait grows with the square of the failed attempt number. See the
+[routing job](zammad-package/app/jobs/wasalx_ticket_routing_job.rb) for the cap and defaults.
+
+When routing or its acknowledgement exhausts its attempts, the worker logs
+the job, ticket, and source article IDs and records the terminal failure on
+the ticket when the source still matches. Use the WasalX action to replay it
+after resolving the failure.

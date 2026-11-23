@@ -269,7 +269,7 @@ test("runtime hook mirrors Zammad after-commit/job/service conventions without p
   assert.match(concern, /wasalx_client_route_status: 'PENDING'/u);
   assert.match(concern, /expected_assignment_revision/u);
   assert.match(routingJob, /self\.enqueue_after_transaction_commit = false/u);
-  assert.match(routingJob, /attempts: :unlimited/u);
+  assert.doesNotMatch(routingJob, /attempts: :unlimited/u);
   assert.match(routingJob, /scope: 'zammad:routing'/);
   assert.match(routingJob, /article_id: input\.fetch\(:article_id\)/);
   assert.match(routingJob, /routing\/acknowledgement/);

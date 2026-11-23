@@ -3,6 +3,7 @@
 # Copyright (c) 2026 Mohammed Altoyan <mohammedaltoyan@gmail.com>
 class WasalxTicketRoutingJob < ApplicationJob
   self.enqueue_after_transaction_commit = false
+  self.log_arguments = false
   UUID = /\A[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\z/i
   ROUTING_PAYLOAD_KEYS = %w[
     admitted_at article_id expected_assignment_revision expected_group_id expected_owner_id
@@ -15,9 +16,22 @@ class WasalxTicketRoutingJob < ApplicationJob
   TERMINAL_FAILURE_CODE = 'WX-EMAIL-ROUTING-TERMINAL'
   TERMINAL_FAILURE_MESSAGE = 'WasalX could not apply this email routing decision. Review the routing setup, then retry from the WasalX action.'
 
-  retry_on Wasalx::Client::TemporaryRequestFailed, attempts: :unlimited, wait: lambda { |executions|
-    [executions * executions * 30.seconds, 15.minutes].min
-  }
+  def self.positive_retry_setting(name, default)
+    value = Integer(ENV.fetch(name, default.to_s), 10, exception: false)
+    raise ArgumentError, "#{name} must be a positive integer" unless value&.positive?
+    value
+  end
+  private_class_method :positive_retry_setting
+
+  RETRY_ATTEMPTS = positive_retry_setting('WASALX_ROUTING_RETRY_ATTEMPTS', 10)
+  RETRY_WAIT_SECONDS = positive_retry_setting('WASALX_ROUTING_RETRY_WAIT_SECONDS', 30)
+  RETRY_MAX_WAIT_SECONDS = 15 * 60
+
+  retry_on Wasalx::Client::TemporaryRequestFailed, attempts: RETRY_ATTEMPTS, wait: lambda { |executions|
+    [executions**2 * RETRY_WAIT_SECONDS, RETRY_MAX_WAIT_SECONDS].min
+  } do |job|
+    job.send(:record_retry_exhaustion)
+  end
 
   class << self
     def replay!(ticket:, article:)
@@ -264,6 +278,14 @@ class WasalxTicketRoutingJob < ApplicationJob
   end
 
   private
+
+  def record_retry_exhaustion
+    input = arguments.first.to_h.deep_stringify_keys.symbolize_keys
+    ticket_id = Integer(input[:ticket_id].to_s, 10, exception: false)
+    article_id = Integer(input[:article_id].to_s, 10, exception: false)
+    logger.error("event=wasalx_ticket_routing_retry_exhausted job_id=#{job_id} ticket_id=#{ticket_id} article_id=#{article_id}")
+    record_terminal_failure(input, input[:phase].to_s)
+  end
 
   def source_article!(input, preference_key, existing = nil)
     article = existing || Ticket::Article.find(input.fetch(:article_id))
