@@ -7,7 +7,7 @@
   "packageManager": "pnpm@11.16.0",
   "scripts": {
     "zammad:package": "node scripts/build-zammad-package.mjs",
-    "test:package": "node --experimental-strip-types --test tests/zammad-package.test.ts",
+    "test:package": "node --experimental-strip-types --test tests/zammad-package.test.ts tests/ci-test-ownership.test.ts",
     "test:components": "pnpm --filter @wasalx/zammad-frontend-test test"
   }
 }
