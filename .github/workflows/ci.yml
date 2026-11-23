@@ -12,8 +12,17 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  ci-gate:
-    if: always()
+  dependency-review:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions: {contents: read}
+    steps:
+      - uses: actions/dependency-review-action@bbc44d14a204704ccc493733616cd1e93a0321ec # v5.0.1
+        with:
+          fail-on-severity: high
+
+  checks:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -60,3 +69,22 @@ jobs:
           ruby tests/zammad-redis-tls.test.rb
       - run: pnpm run test:components --maxWorkers=4 --no-file-parallelism
       - run: pnpm --filter @wasalx/zammad-frontend-test run typecheck
+
+  ci-gate:
+    if: always()
+    needs: [checks, dependency-review]
+    runs-on: ubuntu-slim
+    timeout-minutes: 2
+    permissions: {}
+    steps:
+      - name: Require checks and applicable dependency review
+        env:
+          EVENT: ${{ github.event_name }}
+          CHECKS: ${{ needs.checks.result }}
+          REVIEW: ${{ needs.dependency-review.result }}
+        run: |
+          case "$EVENT:$CHECKS:$REVIEW" in
+            pull_request:success:success|push:success:skipped|merge_group:success:skipped) exit 0 ;;
+          esac
+          echo "Unexpected CI results for $EVENT: checks=$CHECKS, dependency-review=$REVIEW" >&2
+          exit 1
