@@ -1,5 +1,53 @@
+# Merge gates
 /CODEOWNERS @WasalX/maintainers
-/.github/ @WasalX/maintainers
-/pnpm-lock.yaml @WasalX/maintainers
-/AGENTS.md @WasalX/maintainers
-/CLAUDE.md @WasalX/maintainers
+/.github/workflows/ @WasalX/maintainers
+/tests/ci-test-ownership.test.ts @WasalX/maintainers
+/pnpm-workspace.yaml @WasalX/maintainers
+
+# Migrations, deletion and retention
+/zammad-package/db/addon/wasalx/ @WasalX/maintainers
+/zammad-package/app/jobs/wasalx_group_workspace_upload_cleanup_job.rb @WasalX/maintainers
+/zammad-package/config/initializers/wasalx_portal_privacy.rb @WasalX/maintainers
+/zammad-package/lib/wasalx/portal_upload_expiry.rb @WasalX/maintainers
+/zammad-package/lib/wasalx/portal_workspace_uploads.rb @WasalX/maintainers
+
+# Sign-in, authorization, tenant data and secrets
+/zammad-package/config/routes/wasalx.rb @WasalX/maintainers
+/zammad-package/config/initializers/wasalx.rb @WasalX/maintainers
+/zammad-package/config/initializers/wasalx_mailbox_administration.rb @WasalX/maintainers
+/zammad-package/config/initializers/wasalx_portal_mail.rb @WasalX/maintainers
+/zammad-package/app/controllers/api/v1/wasalx_controller.rb @WasalX/maintainers
+/zammad-package/app/controllers/api/v1/wasalx_memberships_controller.rb @WasalX/maintainers
+/zammad-package/app/controllers/api/v1/wasalx_portal_workspace_controller.rb @WasalX/maintainers
+/zammad-package/app/controllers/api/v1/wasalx_routing_configurations_controller.rb @WasalX/maintainers
+/zammad-package/app/controllers/api/v1/wasalx_service_identities_controller.rb @WasalX/maintainers
+/zammad-package/app/models/wasalx_membership.rb @WasalX/maintainers
+/zammad-package/app/models/wasalx/mailbox_verification_smtp.rb @WasalX/maintainers
+/zammad-package/app/models/ticket/article/enqueue_communicate_wasalx_job.rb @WasalX/maintainers
+/zammad-package/app/services/service/ticket/article/type/wasalx_group_message/deliver.rb @WasalX/maintainers
+/zammad-package/app/jobs/communicate_wasalx_job.rb @WasalX/maintainers
+/zammad-package/app/services/service/ticket/wasalx_customer_close.rb @WasalX/maintainers
+/zammad-package/app/services/service/ticket/wasalx_panel.rb @WasalX/maintainers
+/zammad-package/app/services/service/ticket/wasalx_quoted_command.rb @WasalX/maintainers
+/zammad-package/lib/wasalx/bootstrap_settings.rb @WasalX/maintainers
+/zammad-package/lib/wasalx/client.rb @WasalX/maintainers
+/zammad-package/lib/wasalx/group_workspace.rb @WasalX/maintainers
+/zammad-package/lib/wasalx/mailbox_verification.rb @WasalX/maintainers
+/zammad-package/lib/wasalx/membership_*.rb @WasalX/maintainers
+/zammad-package/lib/wasalx/portal_delegation.rb @WasalX/maintainers
+/zammad-package/lib/wasalx/portal_email_sender.rb @WasalX/maintainers
+/zammad-package/lib/wasalx/portal_groups.rb @WasalX/maintainers
+/zammad-package/lib/wasalx/portal_mail*.rb @WasalX/maintainers
+/zammad-package/lib/wasalx/portal_service_identity.rb @WasalX/maintainers
+/zammad-package/lib/wasalx/portal_team_administration.rb @WasalX/maintainers
+/zammad-package/lib/wasalx/reply_preview.rb @WasalX/maintainers
+/zammad-package/lib/wasalx/required_smtp_tls.rb @WasalX/maintainers
+/zammad-package/lib/wasalx/routing_configuration.rb @WasalX/maintainers
+/zammad-package/lib/wasalx/service_identity.rb @WasalX/maintainers
+/zammad-package/lib/wasalx/session_*.rb @WasalX/maintainers
+
+# Package build and production runtime
+/infra/docker/full/zammad/redis-tls.rb @WasalX/maintainers
+/infra/docker/full/zammad/unpack-zpm.mjs @WasalX/maintainers
+/scripts/build-zammad-package.mjs @WasalX/maintainers
+/zammad-package/package-source.json @WasalX/maintainers
