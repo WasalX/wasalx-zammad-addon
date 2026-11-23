@@ -10,6 +10,7 @@
 - UI project: yes. The sidebar and package UI follow the [WasalX design tokens](https://github.com/WasalX/wasalx-platform/blob/main/app/design-system/tokens.css).
 - The owner decides only money (any paid service), access only the owner can grant, production deployments, destructive operations on real data, making private things public, and closing a project. Project leads decide everything else within their scopes.
 - Follow the [platform agent instructions](https://github.com/WasalX/wasalx-platform/blob/main/AGENTS.md) and [platform delivery rules](https://github.com/WasalX/wasalx-platform/blob/main/DELIVERY.md) for shared rules.
+- Follow the [security policy](SECURITY.md) to report vulnerabilities privately.
 
 ## Build and checks
 
