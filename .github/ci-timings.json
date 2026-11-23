@@ -1,0 +1,18 @@
+{
+  "measured_at": "2026-11-23",
+  "workflow": ".github/workflows/ci.yml",
+  "runs": 54,
+  "first_run": 44611487644,
+  "last_run": 45262227621,
+  "jobs": {
+    "dependency-review": {
+      "p95_minutes": 0.1
+    },
+    "checks": {
+      "p95_minutes": 0.65
+    },
+    "ci-gate": {
+      "p95_minutes": 0.75
+    }
+  }
+}
