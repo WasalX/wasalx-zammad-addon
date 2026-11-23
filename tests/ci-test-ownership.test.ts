@@ -13,7 +13,7 @@ const git = (cwd: string, ...args: string[]) =>
 const tracked = (cwd: string, ...patterns: string[]) =>
   git(cwd, "ls-files", "-z", "--", ...patterns.map(pattern => `:(glob)${pattern}`)).split("\0").filter(Boolean);
 const trackedTests = (cwd: string) => tracked(cwd, "**/*.test.*", "**/*.spec.*",
-  "**/*-test.rb", "**/*_test.rb", "**/test_*.rb", "**/*_spec.rb", "**/*-contract.rb", "**/*-native.rb");
+  "tests/**/*.rb", "**/*-test.rb", "**/*_test.rb", "**/test_*.rb", "**/*_spec.rb", "**/*-contract.rb", "**/*-native.rb");
 const quoted = (source: string) =>
   Array.from(source.matchAll(/["']([^"']+)["']/gu), ([, file]) => file);
 
