@@ -6,5 +6,8 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
+msgid "Attachment"
+msgstr "Attachment"
+
 msgid "wasalx.email_routing.terminal_failure_note"
 msgstr "WasalX could not apply this email routing decision. Review the routing setup, then retry from the WasalX action."

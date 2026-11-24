@@ -14,6 +14,12 @@ Article listings show up to 50,000 Unicode codepoints of each body and stop at a
 complete grapheme. Full article reads resume at the preview's actual codepoint
 length and use the full body's digest to check for changes.
 
+## Portal attachments
+
+For portal notes and email with only attachments, preview and the saved article
+use the "Attachment" label in the workspace's default language. A WasalX group
+message can carry attachments with an empty caption.
+
 ## Email routing retries
 
 Set `WASALX_ROUTING_RETRY_ATTEMPTS` and `WASALX_ROUTING_RETRY_WAIT_SECONDS` in

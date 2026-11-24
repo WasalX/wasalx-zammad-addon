@@ -90,6 +90,8 @@ jobs:
           }
 
           check_packages
+          package=$(head -n 1 "$exclusions")
+          sha256sum -- "${package#/}"
           probe=$(mktemp build/zammad/package-guard-XXXXXX.zpm)
           result=0
           check_packages 2>/dev/null || result=$?
