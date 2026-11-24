@@ -1,0 +1,10 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+msgid ""
+msgstr ""
+"Language: en-us\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "wasalx.email_routing.terminal_failure_note"
+msgstr "WasalX could not apply this email routing decision. Review the routing setup, then retry from the WasalX action."

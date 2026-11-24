@@ -14,7 +14,7 @@ class WasalxTicketRoutingJob < ApplicationJob
     route_id tenant_id ticket_id
   ].sort.freeze
   TERMINAL_FAILURE_CODE = 'WX-EMAIL-ROUTING-TERMINAL'
-  TERMINAL_FAILURE_MESSAGE = 'WasalX could not apply this email routing decision. Review the routing setup, then retry from the WasalX action.'
+  TERMINAL_FAILURE_MESSAGE_KEY = 'wasalx.email_routing.terminal_failure_note'
 
   def self.positive_retry_setting(name, default)
     value = Integer(ENV.fetch(name, default.to_s), 10, exception: false)
@@ -338,12 +338,24 @@ class WasalxTicketRoutingJob < ApplicationJob
   def create_terminal_failure_note!(ticket, article, phase)
     Ticket::Article.create!(
       ticket_id: ticket.id, content_type: 'text/plain',
-      body: "#{TERMINAL_FAILURE_MESSAGE} (#{TERMINAL_FAILURE_CODE})", internal: true,
+      body: "#{terminal_failure_message} (#{TERMINAL_FAILURE_CODE})", internal: true,
       sender: Ticket::Article::Sender.find_by(name: 'System'),
       type: Ticket::Article::Type.find_by(name: 'note'),
       preferences: { wasalx_email_routing_failure: true, wasalx_email_routing_failure_phase: phase, source_article_id: article.id },
       updated_by_id: 1, created_by_id: 1
     )
+  end
+
+  def terminal_failure_message
+    require 'poparser' unless defined?(PoParser)
+
+    # Zammad loads only its own POT for en-us, so read the add-on catalogue directly.
+    locale = Locale.default == 'ar' ? 'ar' : 'en-us'
+    catalog = File.expand_path("../../i18n/wasalx.#{locale}.po", __dir__)
+    message = PoParser.parse_file(catalog).entries.find { |entry| entry.msgid.to_s == TERMINAL_FAILURE_MESSAGE_KEY && entry.translated? }
+    raise KeyError, "Missing #{locale} translation for #{TERMINAL_FAILURE_MESSAGE_KEY}" if !message
+
+    message.msgstr.to_s
   end
 
   def positive_id(value, label)

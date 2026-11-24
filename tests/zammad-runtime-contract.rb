@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 # Copyright (c) 2026 Mohammed Altoyan <mohammedaltoyan@gmail.com>
 
+require 'json'
 require 'logger'
 require 'minitest/autorun'
 require 'stringio'
@@ -27,6 +28,27 @@ class Setting
 
     def get(name)
       name == 'import_mode' ? import_mode : nil
+    end
+  end
+end
+
+class Locale
+  class << self
+    attr_accessor :default
+  end
+end
+
+unless defined?(PoParser)
+  module PoParser
+    Entry = Struct.new(:msgid, :msgstr) do
+      def translated? = !msgstr.empty?
+    end
+
+    def self.parse_file(path)
+      entries = File.read(path, encoding: 'UTF-8').scan(/^msgid (".*")\r?\nmsgstr (".*")$/).map do |id, text|
+        Entry.new(JSON.parse(id), JSON.parse(text))
+      end
+      Struct.new(:entries).new(entries)
     end
   end
 end
@@ -493,6 +515,7 @@ class ZammadRuntimeContractTest < Minitest::Test
 
   def setup
     Setting.import_mode = false
+    Locale.default = 'en-us'
     FakeLifecycleTicket.test_transaction = nil
     FakeLifecycleTicket.rows.clear
     CommunicateWasalxJob.reset_jobs!
@@ -947,6 +970,7 @@ class ZammadRuntimeContractTest < Minitest::Test
   end
 
   def test_email_routing_acknowledgement_records_its_own_terminal_failure_note
+    Locale.default = 'ar'
     article, = register(FakeArticle.new.tap { |value| value.sender_id = 2; value.type_id = 12 })
     invoke_routing_enqueue(article)
     payload = WasalxTicketRoutingJob.enqueued_jobs.fetch(0).fetch(0)
@@ -965,7 +989,10 @@ class ZammadRuntimeContractTest < Minitest::Test
     assert_equal 'FAILED_TERMINAL', article.preferences['wasalx_email_routing_ack_state']
     assert_equal true, article.preferences['wasalx_email_routing_ack_failure_noted']
     assert_equal 1, Ticket::Article.created_notes.length
-    assert_equal 'ACKNOWLEDGEMENT', Ticket::Article.created_notes.first.fetch(:preferences).fetch(:wasalx_email_routing_failure_phase)
+    note = Ticket::Article.created_notes.first
+    assert_equal 'ACKNOWLEDGEMENT', note.fetch(:preferences).fetch(:wasalx_email_routing_failure_phase)
+    assert_equal true, note.fetch(:internal)
+    assert_equal 'تعذّر على WasalX تطبيق قرار توجيه البريد الإلكتروني. راجع إعدادات التوجيه، ثم أعد المحاولة من إجراء WasalX. (WX-EMAIL-ROUTING-TERMINAL)', note.fetch(:body)
   end
 
   def test_email_routing_replay_rejects_stale_stored_provenance
@@ -1056,6 +1083,7 @@ class ZammadRuntimeContractTest < Minitest::Test
     assert_equal 'FAILED_TERMINAL', article.preferences['wasalx_email_routing_state']
     assert_equal 'FAILED_TERMINAL', ticket.wasalx_client_route_status
     assert_equal 1, Ticket::Article.created_notes.length
+    assert_equal 'WasalX could not apply this email routing decision. Review the routing setup, then retry from the WasalX action. (WX-EMAIL-ROUTING-TERMINAL)', Ticket::Article.created_notes.first.fetch(:body)
     assert_includes logs.string, 'event=wasalx_ticket_routing_retry_exhausted job_id=b13edf7f-838b-4409-b57b-d661a101c8ed ticket_id=42 article_id=9'
     refute_includes logs.string, 'control API unavailable'
     refute_includes logs.string, payload.fetch('sender_email')
