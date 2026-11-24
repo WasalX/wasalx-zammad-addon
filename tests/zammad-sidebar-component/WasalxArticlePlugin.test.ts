@@ -226,8 +226,11 @@ describe('WasalX template dialog', () => {
     const originalDir = document.documentElement.dir
     document.documentElement.lang = 'ar'
     document.documentElement.dir = 'rtl'
-    const show = vi.spyOn(HTMLDialogElement.prototype, 'showModal').mockImplementation(function(this: HTMLDialogElement) {
-      this.open = true
+    const prototype = HTMLDialogElement.prototype
+    const showModal = Object.getOwnPropertyDescriptor(prototype, 'showModal')
+    Object.defineProperty(prototype, 'showModal', {
+      configurable: true,
+      value(this: HTMLDialogElement) { this.open = true },
     })
     const fetchTemplate = vi.fn()
       .mockResolvedValueOnce(Response.json({ window: 'CLOSED', templates: [{
@@ -258,7 +261,8 @@ describe('WasalX template dialog', () => {
       document.querySelector('dialog')?.remove()
       document.documentElement.lang = originalLang
       document.documentElement.dir = originalDir
-      show.mockRestore()
+      if (showModal) Object.defineProperty(prototype, 'showModal', showModal)
+      else Reflect.deleteProperty(prototype, 'showModal')
       vi.unstubAllGlobals()
     }
   })
