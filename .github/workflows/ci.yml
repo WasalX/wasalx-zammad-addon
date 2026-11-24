@@ -25,9 +25,44 @@ jobs:
   checks:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
+    env:
+      STYLE_BASE: ${{ github.event_name == 'pull_request' && 'HEAD^1' || github.event.merge_group.base_sha || github.event.before }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with: {persist-credentials: false}
+        with:
+          fetch-depth: ${{ github.event_name == 'pull_request' && '2' || '0' }}
+          persist-credentials: false
+      - name: Check workflow changes with actionlint
+        shell: bash
+        run: |
+          if git diff --quiet "$STYLE_BASE" HEAD -- .github; then
+            exit 0
+          fi
+          scratch=$(mktemp -d)
+          trap 'rm -rf -- "$scratch"' EXIT
+          archive="$scratch/actionlint.tar.gz"
+          curl -fsSL https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz -o "$archive"
+          printf '8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8  %s\n' "$archive" | sha256sum -c -
+          tar -xzf "$archive" -C "$scratch" actionlint
+          mkdir "$scratch/base"
+          git archive "$STYLE_BASE" .github | tar -x -C "$scratch/base"
+          git init --quiet "$scratch/base"
+          lint_workflows() (
+            cd "$1" || exit
+            status=0
+            "$scratch/actionlint" -format '{{json .}}' > "$scratch/findings.json" || status=$?
+            if ((status)); then
+              [[ $status == 1 ]] || exit "$status"
+              jq -ce 'select(type == "array" and length > 0)[] | [.filepath, .kind, .message]' "$scratch/findings.json"
+            fi
+          )
+          lint_workflows "$scratch/base" | LC_ALL=C sort > "$scratch/base-findings"
+          lint_workflows "$PWD" | LC_ALL=C sort > "$scratch/head-findings"
+          LC_ALL=C comm -13 "$scratch/base-findings" "$scratch/head-findings" | tee "$scratch/new-findings"
+          printf 'actionlint base=%s head=%s new=%s\n' \
+            "$(wc -l < "$scratch/base-findings")" "$(wc -l < "$scratch/head-findings")" \
+            "$(wc -l < "$scratch/new-findings")"
+          test ! -s "$scratch/new-findings"
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with: {node-version: '24.22.3', package-manager-cache: false}
       - name: Enable pinned pnpm
@@ -58,6 +93,10 @@ jobs:
         with:
           path: ${{ env.PNPM_STORE_PATH }}
           key: ${{ steps.pnpm-cache.outputs.cache-primary-key }}
+      - name: Check changed source style
+        run: |
+          pipx run --spec pre-commit==4.6.2 pre-commit run \
+            --from-ref "$STYLE_BASE" --to-ref HEAD --show-diff-on-failure
       - run: pnpm run zammad:package
       - name: Committed packages are unchanged
         run: git diff --exit-code -- build/zammad

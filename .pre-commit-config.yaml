@@ -1,0 +1,30 @@
+exclude: '^(?:build/|historical-source/)'
+repos:
+  - repo: local
+    hooks:
+      - id: prettier
+        name: Prettier
+        entry: pnpm run format:check
+        language: system
+        files: '\.(?:[cm]?[jt]sx?|vue|css)$'
+      - id: oxlint
+        name: Oxlint
+        entry: pnpm exec oxlint --deny-warnings
+        language: system
+        files: '\.(?:[cm]?[jt]sx?|vue)$'
+      - id: stylelint
+        name: Stylelint
+        entry: pnpm exec stylelint
+        language: system
+        files: '\.(?:css|vue)$'
+  - repo: https://github.com/rubocop/rubocop
+    rev: 5711dcb9850c5adb3df9e5142fa9a1ae4e987c3f # v1.82.1
+    hooks:
+      - id: rubocop
+        name: RuboCop lint and layout
+        args: [--force-exclusion, --only, 'Lint,Layout,Security']
+      - id: rubocop
+        alias: ruby-format
+        name: Format Ruby
+        args: [--force-exclusion, --autocorrect, --only, Layout]
+        stages: [manual]
