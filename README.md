@@ -14,6 +14,12 @@ Article listings show up to 50,000 Unicode codepoints of each body and stop at a
 complete grapheme. Full article reads resume at the preview's actual codepoint
 length and use the full body's digest to check for changes.
 
+## Portal attachments
+
+When a portal note or email contains only attachments, its saved Zammad article
+uses the localized ?Attachment? label as its body. Zammad requires text for
+those article types.
+
 ## Email routing retries
 
 Set `WASALX_ROUTING_RETRY_ATTEMPTS` and `WASALX_ROUTING_RETRY_WAIT_SECONDS` in

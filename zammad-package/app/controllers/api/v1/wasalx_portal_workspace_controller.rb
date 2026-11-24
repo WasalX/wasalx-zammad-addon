@@ -25,6 +25,10 @@ class Api::V1::WasalxPortalWorkspaceController < ApplicationController
       @current_user = actor
     end
     def call(ticket, attributes)
+      # Native notes and email require a body even with verified attachments.
+      if %w[note email].include?(attributes[:type]) && attributes[:form_id].present? && attributes[:body].blank?
+        attributes = attributes.merge(body: __('Attachment'))
+      end
       article_create(ticket, attributes.with_indifferent_access)
     end
   end

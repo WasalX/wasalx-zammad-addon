@@ -8,6 +8,9 @@ require 'monitor'
 
 class Hash
   def to_query; URI.encode_www_form(self); end
+  def with_indifferent_access
+    transform_keys(&:to_s)
+  end
 end
 
 ROOT = File.expand_path('..', __dir__)
@@ -545,6 +548,21 @@ load File.join(ROOT, 'zammad-package/db/addon/wasalx/202608240008_enable_wasalx_
 load File.join(ROOT, 'zammad-package/db/addon/wasalx/202610050016_sync_wasalx_reply_preview_translations.rb')
 
 class ZammadAgentPanelContractTest < Minitest::Test
+  def test_portal_article_writer_supplies_native_body_only_for_attachment_only_notes_and_email
+    writer = Api::V1::WasalxPortalWorkspaceController::ArticleWriter.new(nil)
+    writer.define_singleton_method(:article_create) { |_ticket, attributes| attributes }
+
+    %w[note email].each do |type|
+      attributes = { type: type, body: '', form_id: 'verified-upload-cache' }
+      assert_equal attributes.transform_keys(&:to_s).merge('body' => 'Attachment'), writer.call(nil, attributes)
+      assert_equal 'Draft text', writer.call(nil, attributes.merge(body: 'Draft text')).fetch('body')
+      assert_equal '', writer.call(nil, attributes.merge(form_id: nil)).fetch('body')
+    end
+
+    whatsapp = { type: 'wasalx group message', body: '', form_id: 'verified-upload-cache' }
+    assert_equal whatsapp.transform_keys(&:to_s), writer.call(nil, whatsapp)
+  end
+
   def test_portal_article_preview_ends_on_a_grapheme_boundary
     article_type = Struct.new(:name).new('note')
     article_class = Struct.new(:id, :ticket_id, :body, :content_type, :internal, :from, :sender,
