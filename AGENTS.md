@@ -14,7 +14,15 @@
 
 ## Risk paths
 
-Require the [risk-path review](https://github.com/WasalX/wasalx-platform/blob/main/DELIVERY.md#branching-and-merging) for the high-risk paths listed in [CODEOWNERS](CODEOWNERS). Also review changes to package scripts that control required checks or production builds, and UI or API changes that alter what personal data is exposed or who can see it.
+Only these need the independent [risk-path review](https://github.com/WasalX/wasalx-platform/blob/main/DELIVERY.md#branching-and-merging) because mistakes can be irreversible, silent, or public.
+
+- **Migrations, deletion, and retention** include `zammad-package/db/addon/wasalx/` and privacy, upload cleanup, and expiry code.
+- **Sign-in, authorization, tenant isolation, and secrets** include session, membership, service identity, delegation, and credential handling, plus routes, API controllers, and UI that change who can see personal data.
+- **Outbound safety** includes message and mail routing, delivery, and TLS safeguards in `zammad-package/`.
+- **Merge gates** include `.github/workflows/` and the `scripts` block of any `package.json`.
+- **Production configuration and deploys** include `infra/docker/full/zammad/`, `scripts/build-zammad-package.mjs`, and `zammad-package/package-source.json`.
+
+Docs, design, UI that does not change data exposure, tests, dependency bumps, lock files, and refactors outside these areas need no independent review.
 
 ## Build and checks
 
