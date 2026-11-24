@@ -34,6 +34,16 @@ describe('WasalX ticket composer ownership', () => {
     actions[0]?.perform?.(ticket(base), article, { openReplyForm } as never)
     expect(openReplyForm).toHaveBeenCalledWith(expect.objectContaining({ inReplyTo: 'message-1' }))
   })
+  test('offers the template picker only on a human-owned official WhatsApp ticket', () => {
+    const article = { type: { name: 'wasalx group message' }, sender: { name: 'Customer' },
+      internal: false, internalId: 8, messageId: 'message-1' } as never
+    const actions = (provider: string) => plugin.addActions?.(ticket({
+      ...base, wasalx_bot_state: 'HUMAN', wasalx_provider: provider,
+    }), article)?.map(action => action.name)
+    expect(actions('META')).toEqual(['wasalx group message', 'wasalx-template'])
+    expect(actions('WAHA')).toEqual(['wasalx group message'])
+  })
+
   test.each(['Customer', 'Agent'])('quotes the exact public %s article in desktop and mobile', (sender) => {
     const article = { type: { name: 'wasalx group message' }, sender: { name: sender },
       internal: false, internalId: 8, messageId: 'selected-native-id', preferences: {} } as never
@@ -205,5 +215,51 @@ describe('WasalX retained reply validation lifecycle', () => {
         'application/vnd.openxmlformats-officedocument.presentationml.presentation'],
       size: 25 * 1024 * 1024,
     })
+  })
+})
+
+describe('WasalX template dialog', () => {
+  test('uses RTL and reuses an identical request after an uncertain response', async () => {
+    const modulePath = `${process.cwd()}/../../zammad-package/app/frontend/shared/entities/ticket-article/action/wasalxTemplateDialog.ts`
+    const { openWasalxTemplateDialog } = await import(modulePath)
+    const originalLang = document.documentElement.lang
+    const originalDir = document.documentElement.dir
+    document.documentElement.lang = 'ar'
+    document.documentElement.dir = 'rtl'
+    const show = vi.spyOn(HTMLDialogElement.prototype, 'showModal').mockImplementation(function(this: HTMLDialogElement) {
+      this.open = true
+    })
+    const fetchTemplate = vi.fn()
+      .mockResolvedValueOnce(Response.json({ window: 'CLOSED', templates: [{
+        id: '44', name: 'order_update', language: 'ar', text: 'Order {{1}}', parameterCount: 1,
+        semanticSha256: 'a'.repeat(64),
+      }] }))
+      .mockRejectedValueOnce(new TypeError('simulated lost response'))
+      .mockResolvedValueOnce(Response.json({ id: 'delivery', state: 'QUEUED' }))
+    vi.stubGlobal('fetch', fetchTemplate)
+    try {
+      await openWasalxTemplateDialog('42')
+      const dialog = document.querySelector('dialog')!
+      expect(dialog.dir).toBe('rtl')
+      const select = dialog.querySelector('select')!
+      select.value = '44'
+      select.dispatchEvent(new Event('change'))
+      const input = dialog.querySelector('input')!
+      expect(input.dir).toBe('auto')
+      input.value = '42'
+      const form = dialog.querySelector('form')!
+      form.dispatchEvent(new Event('submit', { cancelable: true }))
+      await vi.waitFor(() => expect(dialog.textContent).toContain('Could not confirm'))
+      expect(input.readOnly).toBe(true)
+      form.dispatchEvent(new Event('submit', { cancelable: true }))
+      await vi.waitFor(() => expect(dialog.textContent).toContain('Template queued'))
+      expect(fetchTemplate.mock.calls[1]?.[1]?.body).toBe(fetchTemplate.mock.calls[2]?.[1]?.body)
+    } finally {
+      document.querySelector('dialog')?.remove()
+      document.documentElement.lang = originalLang
+      document.documentElement.dir = originalDir
+      show.mockRestore()
+      vi.unstubAllGlobals()
+    }
   })
 })

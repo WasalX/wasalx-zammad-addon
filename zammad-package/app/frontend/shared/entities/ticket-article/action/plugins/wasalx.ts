@@ -7,6 +7,7 @@ import { getAcceptableFileTypesString } from '#shared/utils/files.ts'
 
 import { observeWasalxValidationRemoval } from '../../../../form/validation/rules/wasalx-require-one.ts'
 
+import { openWasalxTemplateDialog } from '../wasalxTemplateDialog.ts'
 import { attachWasalxReplyPreview, detachWasalxReplyPreview } from '../wasalxReplyPreview.ts'
 
 import type {
@@ -94,7 +95,19 @@ const actionPlugin: TicketArticleActionPlugin = {
         })
       },
     }
-    return [action]
+    const attributes = ticketAttributes(ticket)
+    if (attributes.get('wasalx_bot_state') !== 'HUMAN' || attributes.get('wasalx_provider') !== 'META') return [action]
+
+    return [action, {
+      apps: ['mobile', 'desktop'],
+      label: __('Send WhatsApp template'),
+      name: 'wasalx-template',
+      icon: 'whatsapp',
+      view: { agent: ['change'] },
+      perform(currentTicket) {
+        void openWasalxTemplateDialog(String(currentTicket.internalId ?? ''))
+      },
+    }]
   },
 
   addTypes(ticket) {

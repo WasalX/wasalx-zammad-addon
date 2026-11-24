@@ -85,6 +85,35 @@ class Api::V1::WasalxController < ApplicationController
     render json: Service::Ticket::WasalxPanel.new(ticket: ticket, current_user: current_user).execute
   end
 
+  def ticket_templates
+    ensure_group_agent!
+    ticket = Ticket.find(positive_identifier!(params[:ticket_id], 'ticket'))
+    ticket.with_lock do
+      authorize!(ticket, :agent_update_access?)
+      actor = User.find(current_user.id)
+      raise Exceptions::Forbidden, __('Not authorized') unless actor.active && actor.permissions?('ticket.agent') &&
+        actor.group_ids_access('full').map(&:to_s).include?(ticket.group_id.to_s) && !Wasalx::ServiceIdentity.automation?(actor)
+      Wasalx::MembershipAccess.check!(actor)
+      raise ActiveRecord::RecordNotFound unless ticket.wasalx_bot_state == 'HUMAN' && ticket.wasalx_provider == 'META'
+
+      payload = { tenant_id: ENV.fetch('WASALX_TENANT_ID'), ticket_id: ticket.id,
+                  connection_id: uuid!(ticket.wasalx_connection_id, 'connection'), group_id: ticket.wasalx_group_id.to_s }
+      if request.get?
+        endpoint = '/internal/v1/zammad/ticket-templates/catalog'
+      else
+        input = params.require(:input)
+        payload.merge!(request_token: uuid!(input[:request_token], 'template request'),
+                       template_id: input[:template_id], template_sha256: input[:template_sha256], parameters: input[:parameters])
+        endpoint = '/internal/v1/zammad/ticket-templates/send'
+      end
+      render json: Wasalx::Client.post(endpoint, payload, scope: 'zammad:outbound', actor: Wasalx::GroupWorkspace.actor_claims(actor)),
+             status: request.get? ? :ok : :accepted
+    end
+  rescue Wasalx::Client::RequestFailed => e
+    status = { 401 => :forbidden, 403 => :forbidden, 404 => :not_found, 400 => :bad_request, 409 => :conflict }.fetch(e.http_status, :service_unavailable)
+    head status
+  end
+
   def reply_preview
     ensure_group_agent!
     ticket = Ticket.find(positive_identifier!(params[:ticket_id], 'ticket'))
