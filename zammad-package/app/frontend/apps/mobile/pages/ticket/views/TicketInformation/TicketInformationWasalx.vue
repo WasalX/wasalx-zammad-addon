@@ -16,6 +16,13 @@ const operations = useWasalxTicketOperations(ticketId, {
 <template>
   <section class="space-y-3 pb-4" :aria-label="$t('WasalX operations')">
     <WasalxTicketOperations :operations="operations" />
+    <button
+      v-if="operations.canSendTemplate.value"
+      type="button"
+      class="min-h-11 rounded-lg border border-current px-3 py-2 font-medium focus-visible:outline-2 focus-visible:outline-offset-2"
+      data-test-id="wasalx-send-template"
+      @click="operations.openTemplatePicker"
+    >{{ $t('Send WhatsApp template') }}</button>
     <p v-if="unavailable" role="status">{{ $t('No WasalX operations are available for this ticket.') }}</p>
     <RouterLink to="/wasalx/groups" class="flex min-h-11 items-center justify-center rounded-lg border border-current px-3 py-2 font-medium focus-visible:outline-2 focus-visible:outline-offset-2">
       {{ $t('WhatsApp Groups') }}

@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 <!-- Copyright (c) 2026 Mohammed Altoyan <mohammedaltoyan@gmail.com> -->
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { createMessage } from '@formkit/core'
 import type { FieldEditorContext } from '#shared/components/Form/fields/FieldEditor/types.ts'
 import { attachWasalxReplyPreview } from '#shared/entities/ticket-article/action/wasalxReplyPreview.ts'
@@ -47,20 +47,43 @@ const publicWhatsAppReply = computed(() => {
   const article = form.value?.values.article as { articleType?: string; internal?: boolean } | undefined
   return article?.articleType === 'wasalx group message' && article.internal === false
 })
-watch([form, operations.serviceWindow.state, publicWhatsAppReply], ([currentForm, state, publicReply], _previous, onCleanup) => {
+const templateTarget = ref<HTMLElement | null>(null)
+const windowMessageKey = 'wasalxServiceWindowClosed'
+watch([form, operations.serviceWindow.state, publicWhatsAppReply, operations.canSendTemplate], async ([currentForm, state, publicReply, canSendTemplate], _previous, onCleanup) => {
   const body = currentForm?.getNodeByName('body')
   if (!body || state !== 'closed' || !publicReply) return
   body.store.set(createMessage({
-    key: 'wasalxServiceWindowClosed',
+    key: windowMessageKey,
     type: 'error',
     blocking: true,
     visible: true,
     value: operations.serviceWindow.text.value,
   }))
-  onCleanup(() => body.store.remove('wasalxServiceWindowClosed'))
+  let disposed = false
+  onCleanup(() => {
+    disposed = true
+    templateTarget.value = null
+    body.store.remove(windowMessageKey)
+  })
+  if (!canSendTemplate) return
+  await nextTick()
+  if (disposed) return
+  // The native FormKit message id is the field id followed by the message key.
+  const message = document.getElementById(body.props.id + '-' + windowMessageKey)
+  templateTarget.value = message?.parentElement ?? null
 }, { immediate: true })
 </script>
 <template>
+  <Teleport v-if="templateTarget" :to="templateTarget">
+    <li>
+      <button
+        type="button"
+        class="my-1 min-h-9 rounded-md border border-current px-3 py-1 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2"
+        data-test-id="wasalx-send-template"
+        @click="operations.openTemplatePicker"
+      >{{ $t('Send WhatsApp template') }}</button>
+    </li>
+  </Teleport>
   <TicketSidebarWrapper :key="sidebar" :sidebar="sidebar" :sidebar-plugin="sidebarPlugin" :selected="selected">
     <TicketSidebarContent v-model="scrollPosition" :title="sidebarPlugin.title" :icon="sidebarPlugin.icon" icon-class="text-green-500 dark:text-green-400">
       <WasalxTicketOperations :operations="operations" />

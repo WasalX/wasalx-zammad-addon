@@ -1,2 +1,3 @@
 /pnpm-lock.yaml linguist-generated
 /build/zammad/*.zpm linguist-generated
+/zammad-package/** text=auto eol=lf

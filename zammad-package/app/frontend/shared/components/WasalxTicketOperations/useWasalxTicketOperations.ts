@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Mohammed Altoyan <mohammedaltoyan@gmail.com>
 import { computed, onBeforeUnmount, ref, watch, type Ref } from 'vue'
 import { useWasalxServiceWindow } from './useWasalxServiceWindow.ts'
+import { openWasalxTemplateDialog } from '../../entities/ticket-article/action/wasalxTemplateDialog.ts'
 
 type WasalxPanel = {
   ticket: {
@@ -136,6 +137,14 @@ export function useWasalxTicketOperations(
   })
 
   const serviceWindow = useWasalxServiceWindow(() => panel.value?.service_window_expires_at)
+  const canSendTemplate = computed(() =>
+    serviceWindow.state.value === 'closed' &&
+    panel.value?.ticket.bot_state === 'HUMAN' &&
+    panel.value?.connection.provider === 'META',
+  )
+  const openTemplatePicker = () => {
+    if (canSendTemplate.value && ticketId.value) void openWasalxTemplateDialog(String(ticketId.value))
+  }
   const connectionTone = computed(() => tone(panel.value?.connection.state))
   const deliveryTone = computed(() => tone(panel.value?.delivery.state))
   const retryEligible = computed(() => Boolean(
@@ -333,6 +342,8 @@ export function useWasalxTicketOperations(
     emailRetryEligible,
     retryConfirmationValid,
     serviceWindow,
+    canSendTemplate,
+    openTemplatePicker,
     caseHeadingId,
     formatCount,
     label,

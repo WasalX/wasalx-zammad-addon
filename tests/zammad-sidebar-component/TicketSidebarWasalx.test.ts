@@ -996,15 +996,23 @@ test('mobile background 404 removes old status and exact triggering-message cont
 
 describe('direct ticket customer-service window', () => {
   const composers: ReturnType<typeof composer>[] = []
+  const messageLists: HTMLUListElement[] = []
   const start = Date.parse('2026-08-12T10:00:00.000Z')
   const open = (expiresAt: string | null | undefined) => {
     const value = panel('SENT')
+    value.connection.provider = 'META'
     if (expiresAt !== undefined) value.service_window_expires_at = expiresAt
     fetchMock.mockImplementation(async (url) => response(String(url).endsWith('/reply-preview')
       ? { text: 'Prepared reply' } : value) as Response)
     const draft = composer()
     composers.push(draft)
-    return { ...draft, wrapper: mountSidebar(true, draft.form) }
+    const messages = document.createElement('ul')
+    const message = document.createElement('li')
+    message.id = draft.body.props.id + '-wasalxServiceWindowClosed'
+    messages.append(message)
+    document.body.append(messages)
+    messageLists.push(messages)
+    return { ...draft, messages, wrapper: mountSidebar(true, draft.form) }
   }
   const line = (wrapper: VueWrapper) => wrapper.find('[data-test-id="wasalx-service-window"]')
   const blocker = (body: FormKitNode) => body.store.wasalxServiceWindowClosed
@@ -1020,22 +1028,25 @@ describe('direct ticket customer-service window', () => {
   afterEach(() => {
     while (mounted.length) mounted.pop()?.unmount()
     while (composers.length) composers.pop()?.root.destroy()
+    while (messageLists.length) messageLists.pop()?.remove()
     vi.useRealTimers()
     vi.unstubAllGlobals()
   })
 
   test('counts down open and closing, then blocks only public free text once closed', async () => {
-    const { wrapper, body, nodes } = open(new Date(start + 3 * 60 * 60 * 1000).toISOString())
+    const { wrapper, body, nodes, messages } = open(new Date(start + 3 * 60 * 60 * 1000).toISOString())
     await settle()
     expect(line(wrapper).get('dd').attributes('data-state')).toBe('open')
     expect(line(wrapper).text()).toContain('Customer-service window')
     expect(line(wrapper).text()).toContain('Send window expires')
     expect(line(wrapper).text()).toContain('in 3 hours')
+    expect(messages.querySelector('button')).toBeNull()
     expect(blocker(body)).toBeUndefined()
 
     await advance(2 * 60 * 60 * 1000 + 30 * 60 * 1000)
     expect(line(wrapper).get('dd').attributes('data-state')).toBe('closing')
     expect(line(wrapper).text()).toContain('in 30 minutes')
+    expect(messages.querySelector('button')).toBeNull()
     expect(blocker(body)).toBeUndefined()
 
     await advance(30 * 60 * 1000)
@@ -1043,6 +1054,9 @@ describe('direct ticket customer-service window', () => {
     expect(line(wrapper).text()).toContain('Window closed: send an approved template')
     expect(blocker(body)).toMatchObject({ blocking: true, visible: true,
       value: 'Window closed: send an approved template' })
+    const trigger = messages.querySelector('button')
+    expect(trigger?.type).toBe('button')
+    expect(trigger?.textContent).toContain('Send WhatsApp template')
     // axe schedules its checks on real timers.
     vi.useRealTimers()
     await expectComponentAccessible(wrapper)
@@ -1050,15 +1064,19 @@ describe('direct ticket customer-service window', () => {
     await nodes.internal.input(true, false)
     await settle()
     expect(blocker(body)).toBeUndefined()
+    expect(messages.querySelector('button')).toBeNull()
     await nodes.internal.input(false, false)
     await settle()
     expect(blocker(body)).toMatchObject({ blocking: true })
+    expect(messages.querySelector('button')).not.toBeNull()
     wrapper.unmount()
     expect(blocker(body)).toBeUndefined()
+    expect(messages.querySelector('button')).toBeNull()
   })
 
   test.each([undefined, null, 'not-a-time'])('shows no window and never blocks when the expiry is %s', async (expiresAt) => {
-    const { wrapper, body } = open(expiresAt)
+    const { wrapper, body, messages } = open(expiresAt)
+    expect(messages.querySelector('button')).toBeNull()
     await settle()
     expect(wrapper.find('[data-test-id="wasalx-ticket-panel"]').exists()).toBe(true)
     expect(line(wrapper).exists()).toBe(false)

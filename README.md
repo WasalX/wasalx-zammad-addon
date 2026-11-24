@@ -30,8 +30,9 @@ action to replay it after resolving the failure.
 
 ### Send an approved WhatsApp template
 
-On a direct WhatsApp ticket assigned to an agent, open **Send WhatsApp template**
-from a public WhatsApp article. When the customer-service window is closed, choose
-an approved template, review its body and fill its parameters. Follow the delivery
+On a direct WhatsApp ticket assigned to an agent, select **Send WhatsApp template**
+beside the closed-window message in the public reply composer. On mobile, the
+same action is in the ticket's WasalX operations. Choose an approved template,
+review its body and fill its parameters. Follow the delivery
 state in the ticket's WasalX panel. If the application cannot confirm queueing,
 retry from the same dialog to reuse the send request.
