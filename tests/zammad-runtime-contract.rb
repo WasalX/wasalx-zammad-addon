@@ -38,16 +38,18 @@ class Locale
   end
 end
 
-module PoParser
-  Entry = Struct.new(:msgid, :msgstr) do
-    def translated? = !msgstr.empty?
-  end
-
-  def self.parse_file(path)
-    entries = File.read(path, encoding: 'UTF-8').scan(/^msgid (".*")\r?\nmsgstr (".*")$/).map do |id, text|
-      Entry.new(JSON.parse(id), JSON.parse(text))
+unless defined?(PoParser)
+  module PoParser
+    Entry = Struct.new(:msgid, :msgstr) do
+      def translated? = !msgstr.empty?
     end
-    Struct.new(:entries).new(entries)
+
+    def self.parse_file(path)
+      entries = File.read(path, encoding: 'UTF-8').scan(/^msgid (".*")\r?\nmsgstr (".*")$/).map do |id, text|
+        Entry.new(JSON.parse(id), JSON.parse(text))
+      end
+      Struct.new(:entries).new(entries)
+    end
   end
 end
 

@@ -352,10 +352,10 @@ class WasalxTicketRoutingJob < ApplicationJob
     # Zammad loads only its own POT for en-us, so read the add-on catalogue directly.
     locale = Locale.default == 'ar' ? 'ar' : 'en-us'
     catalog = File.expand_path("../../i18n/wasalx.#{locale}.po", __dir__)
-    message = PoParser.parse_file(catalog).entries.find { |entry| entry.msgid == TERMINAL_FAILURE_MESSAGE_KEY && entry.translated? }
+    message = PoParser.parse_file(catalog).entries.find { |entry| entry.msgid.to_s == TERMINAL_FAILURE_MESSAGE_KEY && entry.translated? }
     raise KeyError, "Missing #{locale} translation for #{TERMINAL_FAILURE_MESSAGE_KEY}" if !message
 
-    message.msgstr
+    message.msgstr.to_s
   end
 
   def positive_id(value, label)
