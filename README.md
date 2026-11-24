@@ -16,9 +16,9 @@ length and use the full body's digest to check for changes.
 
 ## Portal attachments
 
-When a portal note or email contains only attachments, its saved Zammad article
-uses the localized ?Attachment? label as its body. Zammad requires text for
-those article types.
+For portal notes and email with only attachments, preview and the saved article
+use the "Attachment" label in the workspace's default language. A WasalX group
+message can carry attachments with an empty caption.
 
 ## Email routing retries
 
