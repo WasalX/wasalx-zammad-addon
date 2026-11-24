@@ -1060,7 +1060,7 @@ describe('direct ticket customer-service window', () => {
   test.each([undefined, null, 'not-a-time'])('shows no window and never blocks when the expiry is %s', async (expiresAt) => {
     const { wrapper, body } = open(expiresAt)
     await settle()
-    expect(wrapper.get('[data-test-id="wasalx-ticket-panel"]').exists()).toBe(true)
+    expect(wrapper.find('[data-test-id="wasalx-ticket-panel"]').exists()).toBe(true)
     expect(line(wrapper).exists()).toBe(false)
     await advance(48 * 60 * 60 * 1000)
     expect(line(wrapper).exists()).toBe(false)
