@@ -8,5 +8,6 @@ The base wait grows with the square of the failed attempt number. See the
 
 When routing or its acknowledgement exhausts its attempts, the worker logs
 the job, ticket, and source article IDs and records the terminal failure on
-the ticket when the source still matches. Use the WasalX action to replay it
-after resolving the failure.
+the ticket when the source still matches. The internal note uses Arabic when
+Zammad's default language is Arabic, and English otherwise. Use the WasalX
+action to replay it after resolving the failure.
