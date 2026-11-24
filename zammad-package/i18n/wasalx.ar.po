@@ -525,6 +525,12 @@ msgstr "بانتظار الإرسال"
 msgid "Send window expires"
 msgstr "تنتهي نافذة الإرسال"
 
+msgid "Customer-service window"
+msgstr "نافذة خدمة العملاء"
+
+msgid "Window closed: send an approved template"
+msgstr "أُغلقت النافذة: أرسل قالبًا معتمدًا"
+
 msgid "Next check"
 msgstr "الفحص التالي"
 

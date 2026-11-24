@@ -1442,6 +1442,7 @@ class ZammadAgentPanelContractTest < Minitest::Test
     assert_equal false, panel[:message_contexts_truncated]
     assert_equal true, panel.dig(:connection, :available)
     assert_equal true, panel[:can_retry]
+    assert_nil panel[:service_window_expires_at]
     assert_equal 'https://portal.wasalx.test/?view=cases&ticket=10382', panel[:portal_url]
     assert_equal(
       [
@@ -1574,6 +1575,22 @@ class ZammadAgentPanelContractTest < Minitest::Test
     assert_equal '9', panel.dig(:delivery, :article_id)
     assert_equal true, panel.dig(:delivery, :retry_allowed)
     assert_equal true, panel.dig(:delivery, :retry_requires_confirmation)
+  end
+
+  def test_panel_normalizes_the_direct_service_window_expiry_to_utc
+    Wasalx::Client.test_response['service_window_expires_at'] = '2026-08-10T23:00:00+03:00'
+    panel = Service::Ticket::WasalxPanel.new(
+      ticket: Ticket.record,
+      current_user: FakeUser.new(%w[ticket.agent])
+    ).execute
+    assert_equal '2026-08-10T20:00:00.000000Z', panel[:service_window_expires_at]
+
+    Wasalx::Client.test_error = Wasalx::Client::TemporaryRequestFailed.new('HTTP 503')
+    panel = Service::Ticket::WasalxPanel.new(
+      ticket: Ticket.record,
+      current_user: FakeUser.new(%w[ticket.agent])
+    ).execute
+    assert_nil panel[:service_window_expires_at]
   end
 
   def test_mismatched_remote_connection_fails_closed
