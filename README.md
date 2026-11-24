@@ -1,3 +1,13 @@
+## Customer-service window
+
+Direct tickets show the time left in the customer-service window in the ticket
+sidebar. The platform's ticket context supplies `service_window_expires_at` as
+a UTC ISO 8601 instant, and the sidebar shows it in the agent's time zone. Once
+the window has closed, the desktop composer blocks public WhatsApp free text
+and says to send an approved template. Internal notes stay available. When the
+expiry is missing or unreadable, the sidebar shows nothing and sending is not
+blocked. `useWasalxServiceWindow.ts` holds the window state.
+
 ## Portal article previews
 
 Article listings show up to 50,000 Unicode codepoints of each body and stop at a

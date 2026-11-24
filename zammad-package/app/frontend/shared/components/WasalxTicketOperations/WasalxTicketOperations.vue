@@ -24,6 +24,7 @@ const {
   retryDelivery,
   retryEmailRouting,
 } = props.operations
+const { state: serviceWindowState, text: serviceWindowText } = props.operations.serviceWindow
 </script>
 
 <template>
@@ -114,6 +115,17 @@ const {
         <div>
           <dt class="text-neutral-600 dark:text-neutral-400">{{ $t('Last activity') }}</dt>
           <dd class="mt-1 font-mono tabular-nums">{{ timestamp(panel.connection.last_provider_event_at) }}</dd>
+        </div>
+        <div v-if="serviceWindowState !== 'unknown'" data-test-id="wasalx-service-window">
+          <dt class="text-neutral-600 dark:text-neutral-400">{{ $t('Customer-service window') }}</dt>
+          <dd
+            class="mt-1"
+            :class="{
+              'text-amber-700 dark:text-amber-400': serviceWindowState === 'closing',
+              'text-red-700 dark:text-red-400': serviceWindowState === 'closed',
+            }"
+            :data-state="serviceWindowState"
+          >{{ serviceWindowText }}</dd>
         </div>
         <div v-if="panel.ticket.bot_state">
           <dt class="text-neutral-600 dark:text-neutral-400">{{ $t('Conversation') }}</dt>

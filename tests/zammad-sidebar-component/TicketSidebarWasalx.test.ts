@@ -52,6 +52,7 @@ type Panel = {
     retry_allowed: boolean
     updated_at: string
   } | null
+  service_window_expires_at?: string | null
 }
 
 type FetchResult = Pick<Response, 'json' | 'ok' | 'status'>
@@ -991,4 +992,78 @@ test('mobile background 404 removes old status and exact triggering-message cont
     vi.unstubAllGlobals()
     delete (document as unknown as { visibilityState?: string }).visibilityState
   }
+})
+
+describe('direct ticket customer-service window', () => {
+  const composers: ReturnType<typeof composer>[] = []
+  const start = Date.parse('2026-08-12T10:00:00.000Z')
+  const open = (expiresAt: string | null | undefined) => {
+    const value = panel('SENT')
+    if (expiresAt !== undefined) value.service_window_expires_at = expiresAt
+    fetchMock.mockImplementation(async (url) => response(String(url).endsWith('/reply-preview')
+      ? { text: 'Prepared reply' } : value) as Response)
+    const draft = composer()
+    composers.push(draft)
+    return { ...draft, wrapper: mountSidebar(true, draft.form) }
+  }
+  const line = (wrapper: VueWrapper) => wrapper.find('[data-test-id="wasalx-service-window"]')
+  const blocker = (body: FormKitNode) => body.store.wasalxServiceWindowClosed
+  const advance = async (milliseconds: number) => {
+    await vi.advanceTimersByTimeAsync(milliseconds)
+    await settle()
+  }
+  beforeEach(() => {
+    vi.useFakeTimers({ now: start })
+    fetchMock.mockReset()
+    vi.stubGlobal('fetch', fetchMock)
+  })
+  afterEach(() => {
+    while (mounted.length) mounted.pop()?.unmount()
+    while (composers.length) composers.pop()?.root.destroy()
+    vi.useRealTimers()
+    vi.unstubAllGlobals()
+  })
+
+  test('counts down open and closing, then blocks only public free text once closed', async () => {
+    const { wrapper, body, nodes } = open(new Date(start + 3 * 60 * 60 * 1000).toISOString())
+    await settle()
+    expect(line(wrapper).get('dd').attributes('data-state')).toBe('open')
+    expect(line(wrapper).text()).toContain('Customer-service window')
+    expect(line(wrapper).text()).toContain('Send window expires')
+    expect(line(wrapper).text()).toContain('in 3 hours')
+    expect(blocker(body)).toBeUndefined()
+
+    await advance(2 * 60 * 60 * 1000 + 30 * 60 * 1000)
+    expect(line(wrapper).get('dd').attributes('data-state')).toBe('closing')
+    expect(line(wrapper).text()).toContain('in 30 minutes')
+    expect(blocker(body)).toBeUndefined()
+
+    await advance(30 * 60 * 1000)
+    expect(line(wrapper).get('dd').attributes('data-state')).toBe('closed')
+    expect(line(wrapper).text()).toContain('Window closed: send an approved template')
+    expect(blocker(body)).toMatchObject({ blocking: true, visible: true,
+      value: 'Window closed: send an approved template' })
+    // axe schedules its checks on real timers.
+    vi.useRealTimers()
+    await expectComponentAccessible(wrapper)
+
+    await nodes.internal.input(true, false)
+    await settle()
+    expect(blocker(body)).toBeUndefined()
+    await nodes.internal.input(false, false)
+    await settle()
+    expect(blocker(body)).toMatchObject({ blocking: true })
+    wrapper.unmount()
+    expect(blocker(body)).toBeUndefined()
+  })
+
+  test.each([undefined, null, 'not-a-time'])('shows no window and never blocks when the expiry is %s', async (expiresAt) => {
+    const { wrapper, body } = open(expiresAt)
+    await settle()
+    expect(wrapper.find('[data-test-id="wasalx-ticket-panel"]').exists()).toBe(true)
+    expect(line(wrapper).exists()).toBe(false)
+    await advance(48 * 60 * 60 * 1000)
+    expect(line(wrapper).exists()).toBe(false)
+    expect(blocker(body)).toBeUndefined()
+  })
 })
