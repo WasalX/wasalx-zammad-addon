@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (c) 2026 Mohammed Altoyan <mohammedaltoyan@gmail.com>
 import { computed, onBeforeUnmount, ref, watch, type Ref } from 'vue'
+import { useWasalxServiceWindow } from './useWasalxServiceWindow.ts'
 
 type WasalxPanel = {
   ticket: {
@@ -41,6 +42,7 @@ type WasalxPanel = {
     retry_allowed: boolean
     updated_at: string
   } | null
+  service_window_expires_at?: string | null
   can_retry: boolean
 }
 
@@ -133,6 +135,7 @@ export function useWasalxTicketOperations(
     document.removeEventListener('visibilitychange', refreshWhenVisible)
   })
 
+  const serviceWindow = useWasalxServiceWindow(() => panel.value?.service_window_expires_at)
   const connectionTone = computed(() => tone(panel.value?.connection.state))
   const deliveryTone = computed(() => tone(panel.value?.delivery.state))
   const retryEligible = computed(() => Boolean(
@@ -329,6 +332,7 @@ export function useWasalxTicketOperations(
     retryEligible,
     emailRetryEligible,
     retryConfirmationValid,
+    serviceWindow,
     caseHeadingId,
     formatCount,
     label,
