@@ -1,3 +1,9 @@
+## Portal article previews
+
+Article listings show up to 50,000 Unicode codepoints of each body and stop at a
+complete grapheme. Full article reads resume at the preview's actual codepoint
+length and use the full body's digest to check for changes.
+
 ## Email routing retries
 
 Set `WASALX_ROUTING_RETRY_ATTEMPTS` and `WASALX_ROUTING_RETRY_WAIT_SECONDS` in
