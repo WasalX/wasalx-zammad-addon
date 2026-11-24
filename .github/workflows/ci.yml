@@ -59,8 +59,34 @@ jobs:
           path: ${{ env.PNPM_STORE_PATH }}
           key: ${{ steps.pnpm-cache.outputs.cache-primary-key }}
       - run: pnpm run zammad:package
-      - name: Committed packages are unchanged
-        run: git diff --exit-code -- build/zammad
+      - name: Check for unexpected package changes
+        run: |
+          # The current package and manifest are generated from source, while historical packages are tracked.
+          exclusions=$(mktemp)
+          trap 'rm -f -- "$exclusions" ${probe:+"$probe"}' EXIT
+          node --input-type=module -e '
+            import source from "./zammad-package/package-source.json" with { type: "json" };
+            const stem = `/build/zammad/${source.name}-${source.version}`;
+            console.log(`${stem}.zpm\n${stem}.manifest.json`);
+          ' > "$exclusions"
+
+          check_packages() {
+            local changes
+            changes=$(git -c "core.excludesFile=$exclusions" status --porcelain=v1 --untracked-files=all -- build/zammad) || return 2
+            if [[ -n "$changes" ]]; then
+              printf 'Unexpected changes under build/zammad:\n%s\n' "$changes" >&2
+              return 1
+            fi
+          }
+
+          check_packages
+          probe=$(mktemp build/zammad/package-guard-XXXXXX.zpm)
+          result=0
+          check_packages 2>/dev/null || result=$?
+          if [[ "$result" != 1 ]]; then
+            printf 'Expected the package guard to reject %s (exit %s)\n' "$probe" "$result" >&2
+            exit 1
+          fi
       - run: pnpm run test:package
       - name: Run standalone Ruby contracts
         run: |
