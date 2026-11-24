@@ -1043,6 +1043,8 @@ describe('direct ticket customer-service window', () => {
     expect(line(wrapper).text()).toContain('Window closed: send an approved template')
     expect(blocker(body)).toMatchObject({ blocking: true, visible: true,
       value: 'Window closed: send an approved template' })
+    // axe schedules its checks on real timers.
+    vi.useRealTimers()
     await expectComponentAccessible(wrapper)
 
     await nodes.internal.input(true, false)
