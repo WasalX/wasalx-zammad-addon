@@ -17,6 +17,7 @@ class Api::V1::WasalxPortalWorkspaceController < ApplicationController
   class Conflict < StandardError; end
   class ReauthenticationRequired < StandardError; end
   Attachment = Struct.new(:data, :filename, :content_type, :disposition)
+  ARTICLE_PREVIEW_LIMIT = 50_000
   class ArticleWriter
     include CreatesTicketArticles
     attr_reader :current_user
@@ -192,6 +193,18 @@ class Api::V1::WasalxPortalWorkspaceController < ApplicationController
     return '' if Wasalx::PortalMailDelivery.notice?(article)
     body = article.body.to_s
     article.content_type == 'text/html' ? CGI.unescapeHTML(ActionController::Base.helpers.strip_tags(body)) : body
+  end
+
+  def article_preview(body)
+    return body if body.length <= ARTICLE_PREVIEW_LIMIT
+
+    length = 0
+    body.each_grapheme_cluster do |cluster|
+      break if length + cluster.length > ARTICLE_PREVIEW_LIMIT
+
+      length += cluster.length
+    end
+    body[0, length]
   end
 
   def source_context
@@ -544,7 +557,8 @@ class Api::V1::WasalxPortalWorkspaceController < ApplicationController
               end
     { items: visible.map do |article|
         body = article_text(article)
-        { id: article.id.to_s, **(sources ? { has_source: sources.any? { |source| source['article_id'] == article.id.to_s } } : {}), body: body[0, 50_000], body_complete: body.length <= 50_000,
+        preview = article_preview(body)
+        { id: article.id.to_s, **(sources ? { has_source: sources.any? { |source| source['article_id'] == article.id.to_s } } : {}), body: preview, body_complete: preview.length == body.length,
           total_characters: body.length, body_sha256: Digest::SHA256.hexdigest(body), internal: article.internal,
           author: article.from.presence || article.created_by&.fullname, sender: article.sender.name,
           delivery: Wasalx::PortalMailDelivery.article(article),

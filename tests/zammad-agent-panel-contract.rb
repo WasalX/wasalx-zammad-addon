@@ -278,8 +278,16 @@ class UploadCache
 end
 
 class Ticket::Article
+  Scope = Struct.new(:rows) do
+    def order(id:) = self
+    def limit(count) = rows.first(count)
+  end
+
   class << self
     attr_accessor :created_articles, :reply_articles
+
+    def where(ticket_id:) = Scope.new(reply_articles.select { |article| article.ticket_id == ticket_id })
+    def find(id) = reply_articles.find { |article| article.id == id } || raise(ActiveRecord::RecordNotFound)
 
     def find_by(wasalx_operation_key: nil, ticket_id: nil, id: nil, message_id: nil)
       return created_articles.find { |article| article[:wasalx_operation_key] == wasalx_operation_key } if wasalx_operation_key
@@ -304,6 +312,11 @@ class Ticket::Article
       article
     end
   end
+end
+
+class Ticket::ArticlePolicy
+  def initialize(actor, _article) = @actor = actor
+  def show? = @actor.permissions?('ticket.agent')
 end
 
 class Ticket::Article::Sender
@@ -525,11 +538,48 @@ end
 module Wasalx::MembershipAccess
   def self.check!(actor); raise Exceptions::Forbidden unless actor.active; end
 end
+module CreatesTicketArticles; end
 load File.join(ROOT, 'zammad-package/app/controllers/api/v1/wasalx_controller.rb')
+load File.join(ROOT, 'zammad-package/app/controllers/api/v1/wasalx_portal_workspace_controller.rb')
 load File.join(ROOT, 'zammad-package/db/addon/wasalx/202608240008_enable_wasalx_modern_desktop_ui.rb')
 load File.join(ROOT, 'zammad-package/db/addon/wasalx/202610050016_sync_wasalx_reply_preview_translations.rb')
 
 class ZammadAgentPanelContractTest < Minitest::Test
+  def test_portal_article_preview_ends_on_a_grapheme_boundary
+    article_type = Struct.new(:name).new('note')
+    article_class = Struct.new(:id, :ticket_id, :body, :content_type, :internal, :from, :sender,
+                               :type, :preferences, :created_at, :attachments, keyword_init: true)
+    Ticket.record = Ticket.new(id: 42)
+    controller = Api::V1::WasalxPortalWorkspaceController.new
+    controller.instance_variable_set(:@actor, FakeUser.new(%w[ticket.agent], 77, [4]))
+    prefix = 'x' * 49_999
+
+    [
+      [prefix + '👍🏽' + 'tail', prefix],
+      [prefix + 'بِ' + 'tail', prefix],
+      ['x' * 49_998 + '👍🏽' + 'tail', 'x' * 49_998 + '👍🏽'],
+      [prefix + 'x', prefix + 'x']
+    ].each do |body, expected|
+      Ticket::Article.reply_articles = [article_class.new(id: 8, ticket_id: 42, body: body,
+        content_type: 'text/plain', internal: false, from: 'Agent', sender: Ticket::Article::Sender.lookup(id: 1),
+        type: article_type, preferences: {}, created_at: Time.utc(2026, 1, 1), attachments: [])]
+      controller.instance_variable_set(:@input, { 'ticket_id' => '42' })
+      preview = controller.send(:articles).fetch(:items).fetch(0)
+
+      actual = preview.fetch(:body)
+      assert actual == expected, "Expected #{expected.length} codepoints, got #{actual.length} ending in #{actual[-8, 8].inspect}"
+      assert_equal body.length, preview.fetch(:total_characters)
+      assert_equal expected == body, preview.fetch(:body_complete)
+      assert_equal Digest::SHA256.hexdigest(body), preview.fetch(:body_sha256)
+      next if preview.fetch(:body_complete)
+
+      controller.instance_variable_set(:@input, { 'ticket_id' => '42', 'article_id' => '8',
+        'offset' => actual.length, 'expected_sha256' => preview.fetch(:body_sha256) })
+      remainder = controller.send(:article_content)
+      assert body == actual + remainder.fetch(:body), 'Full article must resume from the end of the preview'
+    end
+  end
+
   def reply_preview_controller(**overrides)
     controller = Api::V1::WasalxController.new
     controller.current_user = FakeUser.new(%w[ticket.agent], 77, [4])
