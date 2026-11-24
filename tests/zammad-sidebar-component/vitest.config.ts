@@ -29,8 +29,8 @@ export default defineConfig({
     vue(),
   ],
   resolve: {
-    // Package source lives outside this workspace; use its real pinned rule dependency.
-    dedupe: ['@formkit/rules'],
+    // Package source lives outside this workspace; use its real pinned FormKit dependencies.
+    dedupe: ['@formkit/rules', '@formkit/core'],
     alias: [
       { find: '#shared/i18n/index.ts', replacement: local('./stubs/i18n.ts') },
       {
