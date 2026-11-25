@@ -282,7 +282,7 @@ describe('WasalX template dialog', () => {
       expect(JSON.parse(sessionStorage.getItem(storageKey)!)).toEqual({
         token: JSON.parse(submissions[0]!).input.request_token, id: deliveryId,
       })
-      const button = (label: string) => [...dialog.querySelectorAll('button')].find(item => item.textContent === label)!
+      const button = (label: string) => Array.from(dialog.querySelectorAll('button')).find(item => item.textContent === label)!
       button('Check template delivery status').click()
       await vi.waitFor(() => expect(button('Check template delivery status').disabled).toBe(false))
       button('Send another template').click()
