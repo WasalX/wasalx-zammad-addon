@@ -30,6 +30,8 @@ Rails.application.config.to_prepare do
   Ticket::Article.prepend(message_id_concern) if !(Ticket::Article < message_id_concern)
   ticket_concern = Ticket::EnqueueWasalxTicketStateJob
   Ticket.include(ticket_concern) if !(Ticket < ticket_concern)
+  mobile_ticket_concern = Taskbar::EnqueueWasalxDirectTicketReadJob
+  Taskbar.include(mobile_ticket_concern) unless Taskbar < mobile_ticket_concern
   {
     ActionDispatch::Session::ActiveRecordStore => Wasalx::SessionRefresh::Store,
     Auth::User => Wasalx::ServiceIdentity::PasswordAuthentication,

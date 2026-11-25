@@ -233,6 +233,7 @@ test("runtime hook mirrors Zammad after-commit/job/service conventions without p
   const concern = content(value, "app/models/ticket/article/enqueue_communicate_wasalx_job.rb");
   const job = content(value, "app/jobs/communicate_wasalx_job.rb");
   const ticketConcern = content(value, "app/models/ticket/enqueue_wasalx_ticket_state_job.rb");
+  const mobileTicketConcern = content(value, "app/models/taskbar/enqueue_wasalx_direct_ticket_read_job.rb");
   const ticketJob = content(value, "app/jobs/wasalx_ticket_state_job.rb");
   const routingJob = content(value, "app/jobs/wasalx_ticket_routing_job.rb");
   const initializer = content(value, "config/initializers/wasalx.rb");
@@ -249,6 +250,8 @@ test("runtime hook mirrors Zammad after-commit/job/service conventions without p
   assert.match(initializer, /Rails\.application\.config\.to_prepare/);
   assert.match(initializer, /Ticket::Article\.include\(article_concern\)/);
   assert.match(initializer, /Ticket\.include\(ticket_concern\)/);
+  assert.match(initializer, /Taskbar\.include\(mobile_ticket_concern\)/);
+  assert.match(mobileTicketConcern, /after_create_commit :enqueue_wasalx_direct_ticket_read/);
   assert.match(ticketConcern, /after_update :ticket_enqueue_wasalx_ticket_state_job/);
   assert.match(ticketConcern, /saved_change_to_state_id\?/);
   assert.match(ticketConcern, /self\.class\.current_transaction/);

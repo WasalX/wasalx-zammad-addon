@@ -3,6 +3,7 @@
 # Copyright (c) 2026 Mohammed Altoyan <mohammedaltoyan@gmail.com>
 
 require 'minitest/autorun'
+require 'minitest/mock'
 require 'digest'
 require 'monitor'
 
@@ -523,6 +524,13 @@ class ApplicationJob
   def self.perform_later(*) = raise('Unexpected ticket read enqueue')
 end
 load File.join(ROOT, 'zammad-package/app/jobs/wasalx_direct_ticket_read_job.rb')
+class Taskbar < Struct.new(:app, :callback, :key, :params, :state, :user, keyword_init: true)
+  def self.after_create_commit(callback)
+    define_method(:commit_create) { send(callback) }
+  end
+end
+load File.join(ROOT, 'zammad-package/app/models/taskbar/enqueue_wasalx_direct_ticket_read_job.rb')
+Taskbar.include(Taskbar::EnqueueWasalxDirectTicketReadJob)
 load File.join(ROOT, 'zammad-package/app/services/service/ticket/wasalx_panel.rb')
 load File.join(ROOT, 'zammad-package/app/services/service/ticket/wasalx_reply_context.rb')
 class TicketPolicy
@@ -1576,6 +1584,39 @@ class ZammadAgentPanelContractTest < Minitest::Test
     assert_equal({ connection_id: Ticket.record.wasalx_connection_id, group_id: '4', customer_id: '31',
                    opened_at: opened.to_i * 1000 }, request[:payload])
     assert_equal 17, request[:actor][:user_id]
+  end
+
+  def test_native_mobile_article_open_enqueues_only_an_authorized_direct_ticket
+    ticket = Ticket.record
+    ticket.wasalx_bot_conversation = 'true'
+    ticket.customer_id = 31
+    agent = FakeUser.new(%w[ticket.agent], 17, %w[4])
+    customer = FakeUser.new(%w[ticket.customer], 31, [])
+    # The pinned native Ticket::LiveUser::Upsert creates these Taskbar attributes.
+    presence = { app: 'mobile', callback: 'TicketDetailView', key: "Ticket-#{ticket.id}",
+                 params: { ticket_id: ticket.id }, state: { editing: false }, user: agent }
+    jobs = []
+    opened = Time.utc(2026, 11, 25, 15, 0, 0)
+    Time.stub(:now, opened) do
+      WasalxDirectTicketReadJob.stub(:perform_later, ->(*args) { jobs << args }) do
+        Taskbar.new(**presence.merge(app: 'desktop')).commit_create
+        Taskbar.new(**presence.merge(state: { editing: true })).commit_create
+        Taskbar.new(**presence.merge(params: { ticket_id: ticket.id + 1 })).commit_create
+        Taskbar.new(**presence.merge(user: customer)).commit_create
+        agent.denied_policies = [:agent_read_access?]
+        Taskbar.new(**presence).commit_create
+        agent.denied_policies = []
+        assert_empty jobs
+
+        Taskbar.new(**presence).commit_create
+        assert_equal [[ticket.id, agent.id, ticket.group_id, 31, ticket.wasalx_connection_id, opened.to_i * 1000]], jobs
+        assert_empty Wasalx::Client.post_calls
+
+        ticket.wasalx_bot_conversation = nil
+        Taskbar.new(**presence).commit_create
+        assert_equal 1, jobs.length
+      end
+    end
   end
 
   def test_email_only_panel_projects_applied_routing_without_a_control_plane_lookup

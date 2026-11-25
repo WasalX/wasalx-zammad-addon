@@ -11,9 +11,10 @@ blocked. `useWasalxServiceWindow.ts` holds the window state.
 ## Direct ticket read receipts
 
 Opening a direct ticket in the portal or native desktop queues an
-agent-authorized read request. On mobile, the native ticket information view
-requests the receipt. Sidebar refreshes only reload status. The background job
-rechecks access before handing the request to the platform.
+agent-authorized read request. On mobile, the native ticket article view queues
+the request when it creates the ticket's presence entry. The Ticket Information
+view can also request a receipt. Sidebar refreshes only reload status. The
+background job rechecks access before handing the request to the platform.
 
 ## Portal article previews
 
