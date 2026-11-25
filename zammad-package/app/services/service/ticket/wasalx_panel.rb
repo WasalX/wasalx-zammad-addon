@@ -74,7 +74,8 @@ class Service::Ticket::WasalxPanel < Service::Base
       email_routing: email_routing,
       # UTC instant from WasalX; nil means unknown and must never block sending.
       service_window_expires_at: context[:service_window_expires_at],
-      can_retry: retry_permission?
+      can_retry: retry_permission?,
+      read_signal_available: WasalxDirectTicketReadJob.direct?(ticket)
     }
   end
 

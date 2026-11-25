@@ -4,6 +4,7 @@ import { computed, onBeforeUnmount, ref, watch, type Ref } from 'vue'
 import { useWasalxServiceWindow } from './useWasalxServiceWindow.ts'
 
 type WasalxPanel = {
+  read_signal_available?: boolean
   ticket: {
     id: number
     number: string
@@ -62,7 +63,7 @@ export function useWasalxTicketOperations(
   let retryGeneration = 0
   const countFormatter = new Intl.NumberFormat(document.documentElement.lang || undefined)
 
-  const load = async (background = false) => {
+  const load = async (background = false, opened = false) => {
     request?.abort()
     request = undefined
     if (!background) panel.value = null
@@ -96,6 +97,14 @@ export function useWasalxTicketOperations(
 
       panel.value = value
       visibility.show()
+      if (opened && value.read_signal_available === true) {
+        const csrfToken = document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content
+        void fetch(`/api/v1/wasalx/tickets/${value.ticket.id}/read-signal`, {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { Accept: 'application/json', ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}) },
+        }).catch(() => undefined)
+      }
     } catch (error) {
       if (
         request !== currentRequest ||
@@ -120,7 +129,7 @@ export function useWasalxTicketOperations(
     retryFailure.value = null
     retryConfirmation.value = ''
     retryToken.value = null
-    void load()
+    void load(false, true)
   }, { immediate: true })
   const refreshWhenVisible = () => {
     if (document.visibilityState === 'visible' && !request) void load(true)

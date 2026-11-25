@@ -8,6 +8,13 @@ and says to send an approved template. Internal notes stay available. When the
 expiry is missing or unreadable, the sidebar shows nothing and sending is not
 blocked. `useWasalxServiceWindow.ts` holds the window state.
 
+## Direct ticket read receipts
+
+Opening a direct ticket in the portal or native desktop queues an
+agent-authorized read request. On mobile, the native ticket information view
+requests the receipt. Sidebar refreshes only reload status. The background job
+rechecks access before handing the request to the platform.
+
 ## Portal article previews
 
 Article listings show up to 50,000 Unicode codepoints of each body and stop at a

@@ -546,6 +546,7 @@ class Api::V1::WasalxPortalWorkspaceController < ApplicationController
       raise Exceptions::Forbidden unless writable && target.active && TicketPolicy.new(@actor, Ticket.new(group_id: group_id)).create?
     end
     owners = writable ? ticket_owners(group_id) : []
+    WasalxDirectTicketReadJob.enqueue(ticket, @actor) if !@input['group_id']
     ticket_summary(ticket).merge(can_update: writable, can_reply: writable && reply_allowed?(ticket),
       owner_team_id: group_id.to_s, owners: owners.map { |user| { id: user.id.to_s, name: user.fullname } },
       teams: writable ? ticket_groups.map { |group| { id: group.id.to_s, name: group.name } } : [],

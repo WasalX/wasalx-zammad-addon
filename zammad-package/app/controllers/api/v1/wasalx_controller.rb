@@ -85,6 +85,15 @@ class Api::V1::WasalxController < ApplicationController
     render json: Service::Ticket::WasalxPanel.new(ticket: ticket, current_user: current_user).execute
   end
 
+  def read_signal
+    ensure_group_agent!
+    ticket = Ticket.find(positive_identifier!(params[:ticket_id], 'ticket'))
+    authorize!(ticket, :agent_read_access?)
+
+    WasalxDirectTicketReadJob.enqueue(ticket, current_user)
+    render json: {}, status: :accepted
+  end
+
   def reply_preview
     ensure_group_agent!
     ticket = Ticket.find(positive_identifier!(params[:ticket_id], 'ticket'))

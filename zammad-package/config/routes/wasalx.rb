@@ -11,6 +11,7 @@ Zammad::Application.routes.draw do
   post '/api/v1/wasalx/portal-workspace', to: 'api/v1/wasalx_portal_workspace#create'
   post '/api/v1/wasalx/routing/configuration', to: 'api/v1/wasalx_routing_configurations#create'
   get '/api/v1/wasalx/tickets/:ticket_id/panel', to: 'api/v1/wasalx#panel'
+  post '/api/v1/wasalx/tickets/:ticket_id/read-signal', to: 'api/v1/wasalx#read_signal'
   post '/api/v1/wasalx/tickets/:ticket_id/reply-preview', to: 'api/v1/wasalx#reply_preview'
   post '/api/v1/wasalx/tickets/:ticket_id/native-intents/:operation_id/reconcile-absent', to: 'api/v1/wasalx#reconcile_direct_native_intent'
   post '/api/v1/wasalx/tickets/:ticket_id/customer-close-context', to: 'api/v1/wasalx#customer_close_context'

@@ -160,7 +160,7 @@ class Ticket
   attr_accessor :id, :number, :title, :group_id, :customer_id, :wasalx_connection_id,
                 :wasalx_group_id, :wasalx_group_name, :wasalx_provider,
                 :wasalx_source_message_id, :wasalx_latest_external_message_id,
-                :created_by_id, :updated_by_id, :screen
+                :created_by_id, :updated_by_id, :screen, :wasalx_bot_conversation, :wasalx_bot_state
 
   class << self
     attr_accessor :record, :created_records, :workflow_guard
@@ -175,8 +175,8 @@ class Ticket
       value
     end
 
-    def find_by(number:)
-      [record, *created_records].compact.find { |candidate| candidate.number.to_s == number.to_s }
+    def find_by(number: nil, id: nil)
+      [record, *created_records].compact.find { |candidate| id ? candidate.id == id : candidate.number.to_s == number.to_s }
     end
   end
 
@@ -366,8 +366,8 @@ class User
       raise ActiveRecord::RecordNotFound
     end
 
-    def find_by(login:)
-      records.values.find { |user| user.login == login }
+    def find_by(login: nil, id: nil)
+      id ? records[id] : records.values.find { |user| user.login == login }
     end
 
     def find_by!(login:)
@@ -423,7 +423,7 @@ FakeTicket = Struct.new(
   :id, :number, :wasalx_reference, :wasalx_group_id, :wasalx_group_name,
   :wasalx_connection_id, :wasalx_provider, :wasalx_correlation_status,
   :wasalx_rule_version, :wasalx_delivery_status, :wasalx_bot_state, :wasalx_source_message_id,
-  :wasalx_latest_external_message_id, :updated_by_id, :articles, :screen, :group_id, :title,
+  :wasalx_latest_external_message_id, :updated_by_id, :articles, :screen, :group_id, :title, :customer_id, :wasalx_bot_conversation,
   keyword_init: true
 ) do
   def articles
@@ -518,6 +518,11 @@ class Wasalx::Client
   end
 end
 
+class ApplicationJob
+  def self.retry_on(*, **); end
+  def self.perform_later(*) = raise('Unexpected ticket read enqueue')
+end
+load File.join(ROOT, 'zammad-package/app/jobs/wasalx_direct_ticket_read_job.rb')
 load File.join(ROOT, 'zammad-package/app/services/service/ticket/wasalx_panel.rb')
 load File.join(ROOT, 'zammad-package/app/services/service/ticket/wasalx_reply_context.rb')
 class TicketPolicy
@@ -1529,6 +1534,48 @@ class ZammadAgentPanelContractTest < Minitest::Test
     )
     serialized = panel.to_s
     refute_match(/message_body|payload|secret/i, serialized)
+  end
+
+  def test_direct_ticket_open_queues_only_after_authorization_and_rechecks_before_forwarding
+    Ticket.record.wasalx_bot_conversation = 'true'
+    Ticket.record.customer_id = 31
+    controller = Api::V1::WasalxController.new
+    controller.current_user = FakeUser.new(%w[ticket.agent], 17, %w[4])
+    controller.params = { ticket_id: '42' }
+    jobs = []
+    opened = Time.utc(2026, 11, 25, 15, 0, 0)
+    Time.stub(:now, opened) do
+      WasalxDirectTicketReadJob.stub(:perform_later, ->(*args) { jobs << args }) do
+        controller.deny_authorization = true
+        assert_raises(Exceptions::Forbidden) { controller.read_signal }
+        assert_empty jobs
+        controller.deny_authorization = false
+        controller.read_signal
+        assert_equal :accepted, controller.rendered_status
+        assert_equal [[42, 17, 4, 31, Ticket.record.wasalx_connection_id, opened.to_i * 1000]], jobs
+        assert_empty Wasalx::Client.post_calls
+        controller.panel
+        assert_equal true, controller.rendered[:read_signal_available]
+        assert_equal 1, jobs.length
+        Ticket.record.wasalx_bot_conversation = nil
+        controller.read_signal
+        assert_equal 1, jobs.length
+        Ticket.record.wasalx_bot_conversation = 'true'
+      end
+    end
+    job = WasalxDirectTicketReadJob.new
+    controller.current_user.denied_policies = [:agent_read_access?]
+    job.perform(*jobs.first)
+    assert_empty Wasalx::Client.post_calls
+    controller.current_user.denied_policies = []
+    Wasalx::Client.post_results = [{ 'queued' => true }]
+    job.perform(*jobs.first)
+    request = Wasalx::Client.post_calls.fetch(0)
+    assert_equal '/internal/v1/zammad/tickets/42/read-signal', request[:path]
+    assert_equal 'zammad:ticket-read', request[:scope]
+    assert_equal({ connection_id: Ticket.record.wasalx_connection_id, group_id: '4', customer_id: '31',
+                   opened_at: opened.to_i * 1000 }, request[:payload])
+    assert_equal 17, request[:actor][:user_id]
   end
 
   def test_email_only_panel_projects_applied_routing_without_a_control_plane_lookup

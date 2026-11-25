@@ -513,6 +513,21 @@ describe('TicketSidebarWasalx mounted agent interactions', () => {
     expect(wrapper.get('[data-test-id="wasalx-ticket-panel"]').text()).toContain('Riyadh Operations')
   })
 
+  test('renders a direct ticket while the opening read request is pending or fails', async () => {
+    const direct = { ...panel('SENT'), read_signal_available: true }
+    let finish!: (value: Response) => void
+    fetchMock.mockResolvedValueOnce(response(direct) as Response)
+    fetchMock.mockImplementationOnce(() => new Promise(resolve => { finish = resolve }))
+    const wrapper = mountSidebar(true)
+    await settle()
+    expect(wrapper.get('[data-test-id="wasalx-ticket-panel"]').text()).toContain('Riyadh Operations')
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/wasalx/tickets/42/read-signal', expect.objectContaining({ method: 'POST' }))
+    finish(response({}, 503) as Response)
+    await settle()
+    expect(wrapper.find('[role="alert"]').exists()).toBe(false)
+    expect(wrapper.get('[data-test-id="wasalx-ticket-panel"]').exists()).toBe(true)
+  })
+
   test.each([404, 503])('classifies an unselected sidebar response %s before selection', async (status) => {
     fetchMock.mockResolvedValueOnce(response({}, status) as Response)
     const wrapper = mountSidebar(false)
