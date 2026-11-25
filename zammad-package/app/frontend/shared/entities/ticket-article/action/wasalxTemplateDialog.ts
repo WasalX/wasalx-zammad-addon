@@ -92,6 +92,7 @@ export async function openWasalxTemplateDialog(ticketId: string, stateLabel: (st
     const response = await request(undefined, `?${query}`)
     if (!response.ok) throw new Error('Template receipt unavailable')
     const { delivery } = await response.json() as { delivery: Receipt | null }
+    if (!dialog.open) return null
     if (delivery === null && !recovery.id) return null
     if (!delivery || !uuid.test(delivery.id) || (recovery.id && recovery.id !== delivery.id) || typeof delivery.state !== 'string')
       throw new Error('Invalid template receipt')
