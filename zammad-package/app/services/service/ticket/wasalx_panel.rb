@@ -72,6 +72,8 @@ class Service::Ticket::WasalxPanel < Service::Base
       message_contexts: message_contexts[:items],
       message_contexts_truncated: message_contexts[:truncated],
       email_routing: email_routing,
+      # UTC instant from WasalX; nil means unknown and must never block sending.
+      service_window_expires_at: context[:service_window_expires_at],
       can_retry: retry_permission?
     }
   end
@@ -139,7 +141,8 @@ class Service::Ticket::WasalxPanel < Service::Base
       delivery_retry_requires_confirmation: response['delivery_retry_requires_confirmation'] == true,
       last_heartbeat_at:       optional_timestamp(response['last_heartbeat_at']),
       last_provider_event_at:  optional_timestamp(response['last_provider_event_at']),
-      delivery_updated_at:     optional_timestamp(response['delivery_updated_at'])
+      delivery_updated_at:     optional_timestamp(response['delivery_updated_at']),
+      service_window_expires_at: optional_timestamp(response['service_window_expires_at'])
     }
   rescue Wasalx::Client::RequestFailed, KeyError, NoMethodError, TypeError, ArgumentError
     {
@@ -147,7 +150,7 @@ class Service::Ticket::WasalxPanel < Service::Base
       correlation_state: nil, bot_state: nil, group_name: nil, delivery_state: nil, delivery_id: nil,
       zammad_article_id: nil, delivery_retry_allowed: false,
       delivery_retry_requires_confirmation: false, last_heartbeat_at: nil,
-      last_provider_event_at: nil, delivery_updated_at: nil
+      last_provider_event_at: nil, delivery_updated_at: nil, service_window_expires_at: nil
     }
   end
 

@@ -8,6 +8,9 @@ require 'monitor'
 
 class Hash
   def to_query; URI.encode_www_form(self); end
+  def with_indifferent_access
+    transform_keys(&:to_s)
+  end
 end
 
 ROOT = File.expand_path('..', __dir__)
@@ -83,6 +86,11 @@ class Translation
     def sync_locale_from_po(locale)
       (@synced_locales ||= []) << locale
     end
+
+    def translate(locale, source)
+      catalogue = File.read(File.join(ROOT, "zammad-package/i18n/wasalx.#{locale}.po"), encoding: 'UTF-8')
+      catalogue[/^msgid "#{Regexp.escape(source)}"\r?\nmsgstr "([^"]+)"/, 1] || source
+    end
   end
 end
 
@@ -104,6 +112,10 @@ class Setting
 
     def exists?(name:)
       values.key?(name)
+    end
+
+    def get(name)
+      values.fetch(name)
     end
 
     def set(name, value)
@@ -543,8 +555,72 @@ load File.join(ROOT, 'zammad-package/app/controllers/api/v1/wasalx_controller.rb
 load File.join(ROOT, 'zammad-package/app/controllers/api/v1/wasalx_portal_workspace_controller.rb')
 load File.join(ROOT, 'zammad-package/db/addon/wasalx/202608240008_enable_wasalx_modern_desktop_ui.rb')
 load File.join(ROOT, 'zammad-package/db/addon/wasalx/202610050016_sync_wasalx_reply_preview_translations.rb')
+load File.join(ROOT, 'zammad-package/db/addon/wasalx/202610180007_sync_wasalx_attachment_translation.rb')
+
+module Validations
+  class TicketArticleValidator
+    class Default
+      attr_reader :record
+
+      def initialize(record)
+        @record = record
+      end
+
+      def validate_body
+        record.errors << :body_required if record.body.blank?
+      end
+    end
+  end
+end
+
+load File.join(ROOT, 'zammad-package/lib/validations/ticket_article_validator/wasalx_group_message.rb')
 
 class ZammadAgentPanelContractTest < Minitest::Test
+  def test_portal_article_writer_uses_the_workspace_locale_only_for_attachment_only_notes_and_email
+    Setting.set('locale_default', 'ar')
+    writer = Api::V1::WasalxPortalWorkspaceController::ArticleWriter.new(nil)
+    writer.define_singleton_method(:article_create) { |_ticket, attributes| attributes }
+
+    %w[note email].each do |type|
+      attributes = { type: type, body: '', form_id: 'verified-upload-cache' }
+      assert_equal attributes.transform_keys(&:to_s).merge('body' => 'مرفق'), writer.call(nil, attributes)
+      assert_equal 'Draft text', writer.call(nil, attributes.merge(body: 'Draft text')).fetch('body')
+      assert_equal '', writer.call(nil, attributes.merge(form_id: nil)).fetch('body')
+    end
+
+    whatsapp = { type: 'wasalx group message', body: '', form_id: 'verified-upload-cache' }
+    assert_equal whatsapp.transform_keys(&:to_s), writer.call(nil, whatsapp)
+  end
+
+  def test_wasalx_group_message_requires_body_or_a_native_attachment
+    backend = Validations::TicketArticleValidator::WasalxGroupMessage
+    assert_equal ['wasalx group message'], backend::MATCHING_TYPES
+
+    record = Struct.new(:body, :attachments, :errors).new('', [], [])
+    backend.new(record).validate_body
+    assert_equal [:body_required], record.errors
+    record.errors.clear
+
+    record.instance_variable_set(:@attachments_buffer, [{}])
+    backend.new(record).validate_body
+    assert_empty record.errors
+
+    record.instance_variable_set(:@attachments_buffer, [])
+    record.attachments = [Object.new]
+    backend.new(record).validate_body
+    assert_empty record.errors
+    assert_equal '', record.body
+  end
+
+  def test_attachment_translation_migration_syncs_arabic_without_changing_the_actor
+    Translation.synced_locales = []
+    UserInfo.with_user_id(17) do
+      SyncWasalxAttachmentTranslation.up
+      assert_equal 17, UserInfo.current_user_id
+    end
+    assert_equal ['ar'], Translation.synced_locales
+  end
+
   def test_portal_article_preview_ends_on_a_grapheme_boundary
     article_type = Struct.new(:name).new('note')
     article_class = Struct.new(:id, :ticket_id, :body, :content_type, :internal, :from, :sender,
@@ -1442,6 +1518,7 @@ class ZammadAgentPanelContractTest < Minitest::Test
     assert_equal false, panel[:message_contexts_truncated]
     assert_equal true, panel.dig(:connection, :available)
     assert_equal true, panel[:can_retry]
+    assert_nil panel[:service_window_expires_at]
     assert_equal 'https://portal.wasalx.test/?view=cases&ticket=10382', panel[:portal_url]
     assert_equal(
       [
@@ -1574,6 +1651,22 @@ class ZammadAgentPanelContractTest < Minitest::Test
     assert_equal '9', panel.dig(:delivery, :article_id)
     assert_equal true, panel.dig(:delivery, :retry_allowed)
     assert_equal true, panel.dig(:delivery, :retry_requires_confirmation)
+  end
+
+  def test_panel_normalizes_the_direct_service_window_expiry_to_utc
+    Wasalx::Client.test_response['service_window_expires_at'] = '2026-08-10T23:00:00+03:00'
+    panel = Service::Ticket::WasalxPanel.new(
+      ticket: Ticket.record,
+      current_user: FakeUser.new(%w[ticket.agent])
+    ).execute
+    assert_equal '2026-08-10T20:00:00.000000Z', panel[:service_window_expires_at]
+
+    Wasalx::Client.test_error = Wasalx::Client::TemporaryRequestFailed.new('HTTP 503')
+    panel = Service::Ticket::WasalxPanel.new(
+      ticket: Ticket.record,
+      current_user: FakeUser.new(%w[ticket.agent])
+    ).execute
+    assert_nil panel[:service_window_expires_at]
   end
 
   def test_mismatched_remote_connection_fails_closed

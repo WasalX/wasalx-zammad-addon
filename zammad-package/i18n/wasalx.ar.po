@@ -24,6 +24,9 @@ msgstr "الكل"
 msgid "All Accessible"
 msgstr "كل المجموعات المتاحة"
 
+msgid "Attachment"
+msgstr "مرفق"
+
 msgid "Attachment could not be removed. Try again."
 msgstr "تعذّرت إزالة المرفق. حاول مرة أخرى."
 
@@ -524,6 +527,12 @@ msgstr "بانتظار الإرسال"
 
 msgid "Send window expires"
 msgstr "تنتهي نافذة الإرسال"
+
+msgid "Customer-service window"
+msgstr "نافذة خدمة العملاء"
+
+msgid "Window closed: send an approved template"
+msgstr "أُغلقت النافذة: أرسل قالبًا معتمدًا"
 
 msgid "Next check"
 msgstr "الفحص التالي"

@@ -25,44 +25,21 @@ jobs:
   checks:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
-    env:
-      STYLE_BASE: ${{ github.event_name == 'pull_request' && 'HEAD^1' || github.event.merge_group.base_sha || github.event.before }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: ${{ github.event_name == 'pull_request' && '2' || '0' }}
           persist-credentials: false
-      - name: Check workflow changes with actionlint
-        shell: bash
+      - name: Lint GitHub Actions workflows
+        env:
+          ACTIONLINT_VERSION: '1.7.12'
+          ACTIONLINT_SHA256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
         run: |
-          if git diff --quiet "$STYLE_BASE" HEAD -- .github; then
-            exit 0
-          fi
-          scratch=$(mktemp -d)
-          trap 'rm -rf -- "$scratch"' EXIT
-          archive="$scratch/actionlint.tar.gz"
-          curl -fsSL https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz -o "$archive"
-          printf '8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8  %s\n' "$archive" | sha256sum -c -
-          tar -xzf "$archive" -C "$scratch" actionlint
-          mkdir "$scratch/base"
-          git archive "$STYLE_BASE" .github | tar -x -C "$scratch/base"
-          git init --quiet "$scratch/base"
-          lint_workflows() (
-            cd "$1" || exit
-            status=0
-            "$scratch/actionlint" -format '{{json .}}' > "$scratch/findings.json" || status=$?
-            if ((status)); then
-              [[ $status == 1 ]] || exit "$status"
-              jq -ce 'select(type == "array" and length > 0)[] | [.filepath, .kind, .message]' "$scratch/findings.json"
-            fi
-          )
-          lint_workflows "$scratch/base" | LC_ALL=C sort > "$scratch/base-findings"
-          lint_workflows "$PWD" | LC_ALL=C sort > "$scratch/head-findings"
-          LC_ALL=C comm -13 "$scratch/base-findings" "$scratch/head-findings" | tee "$scratch/new-findings"
-          printf 'actionlint base=%s head=%s new=%s\n' \
-            "$(wc -l < "$scratch/base-findings")" "$(wc -l < "$scratch/head-findings")" \
-            "$(wc -l < "$scratch/new-findings")"
-          test ! -s "$scratch/new-findings"
+          archive="$RUNNER_TEMP/actionlint.tar.gz"
+          curl -fsSL "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz" -o "$archive"
+          printf '%s  %s\n' "$ACTIONLINT_SHA256" "$archive" | sha256sum --check
+          tar -xzf "$archive" -C "$RUNNER_TEMP" actionlint
+          "$RUNNER_TEMP/actionlint"
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with: {node-version: '24.22.3', package-manager-cache: false}
       - name: Enable pinned pnpm
@@ -94,12 +71,42 @@ jobs:
           path: ${{ env.PNPM_STORE_PATH }}
           key: ${{ steps.pnpm-cache.outputs.cache-primary-key }}
       - name: Check changed source style
+        env:
+          STYLE_BASE: ${{ github.event_name == 'pull_request' && 'HEAD^1' || github.event.merge_group.base_sha || github.event.before }}
         run: |
           pipx run --spec pre-commit==4.6.2 pre-commit run \
             --from-ref "$STYLE_BASE" --to-ref HEAD --show-diff-on-failure
       - run: pnpm run zammad:package
-      - name: Committed packages are unchanged
-        run: git diff --exit-code -- build/zammad
+      - name: Check for unexpected package changes
+        run: |
+          # The current package and manifest are generated from source, while historical packages are tracked.
+          exclusions=$(mktemp)
+          trap 'rm -f -- "$exclusions" ${probe:+"$probe"}' EXIT
+          node --input-type=module -e '
+            import source from "./zammad-package/package-source.json" with { type: "json" };
+            const stem = "/build/zammad/" + source.name + "-" + source.version;
+            console.log(stem + ".zpm\n" + stem + ".manifest.json");
+          ' > "$exclusions"
+
+          check_packages() {
+            local changes
+            changes=$(git -c "core.excludesFile=$exclusions" status --porcelain=v1 --untracked-files=all -- build/zammad) || return 2
+            if [[ -n "$changes" ]]; then
+              printf 'Unexpected changes under build/zammad:\n%s\n' "$changes" >&2
+              return 1
+            fi
+          }
+
+          check_packages
+          package=$(head -n 1 "$exclusions")
+          sha256sum -- "${package#/}"
+          probe=$(mktemp build/zammad/package-guard-XXXXXX.zpm)
+          result=0
+          check_packages 2>/dev/null || result=$?
+          if [[ "$result" != 1 ]]; then
+            printf 'Expected the package guard to reject %s (exit %s)\n' "$probe" "$result" >&2
+            exit 1
+          fi
       - run: pnpm run test:package
       - name: Run standalone Ruby contracts
         run: |

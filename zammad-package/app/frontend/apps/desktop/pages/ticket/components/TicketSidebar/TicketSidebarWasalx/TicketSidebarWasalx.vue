@@ -2,6 +2,7 @@
 <!-- Copyright (c) 2026 Mohammed Altoyan <mohammedaltoyan@gmail.com> -->
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { createMessage } from '@formkit/core'
 import type { FieldEditorContext } from '#shared/components/Form/fields/FieldEditor/types.ts'
 import { attachWasalxReplyPreview } from '#shared/entities/ticket-article/action/wasalxReplyPreview.ts'
 import { useWasalxTicketOperations } from '#shared/components/WasalxTicketOperations/useWasalxTicketOperations.ts'
@@ -39,6 +40,25 @@ watch([form, initiallySettled, previewContext, ticketId], ([currentForm, settled
   const dispose = attachWasalxReplyPreview(ticket, context, currentForm, { restoredDraft })
   if (dispose) onCleanup(dispose)
 }, { immediate: true, flush: 'post' })
+
+// Free-text WhatsApp replies cannot be delivered once the customer-service
+// window has closed. Only a known closed window blocks; unknown never does.
+const publicWhatsAppReply = computed(() => {
+  const article = form.value?.values.article as { articleType?: string; internal?: boolean } | undefined
+  return article?.articleType === 'wasalx group message' && article.internal === false
+})
+watch([form, operations.serviceWindow.state, publicWhatsAppReply], ([currentForm, state, publicReply], _previous, onCleanup) => {
+  const body = currentForm?.getNodeByName('body')
+  if (!body || state !== 'closed' || !publicReply) return
+  body.store.set(createMessage({
+    key: 'wasalxServiceWindowClosed',
+    type: 'error',
+    blocking: true,
+    visible: true,
+    value: operations.serviceWindow.text.value,
+  }))
+  onCleanup(() => body.store.remove('wasalxServiceWindowClosed'))
+}, { immediate: true })
 </script>
 <template>
   <TicketSidebarWrapper :key="sidebar" :sidebar="sidebar" :sidebar-plugin="sidebarPlugin" :selected="selected">
