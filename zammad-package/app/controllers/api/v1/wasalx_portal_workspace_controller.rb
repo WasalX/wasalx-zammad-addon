@@ -24,7 +24,17 @@ class Api::V1::WasalxPortalWorkspaceController < ApplicationController
     def initialize(actor)
       @current_user = actor
     end
+    def self.body_with_attachment_label(body, has_attachments:)
+      return body unless has_attachments && body.blank?
+
+      Translation.translate(Setting.get('locale_default'), 'Attachment')
+    end
+
     def call(ticket, attributes)
+      if %w[note email].include?(attributes[:type])
+        body = self.class.body_with_attachment_label(attributes[:body], has_attachments: attributes[:form_id].present?)
+        attributes = attributes.merge(body: body)
+      end
       article_create(ticket, attributes.with_indifferent_access)
     end
   end
@@ -436,12 +446,14 @@ class Api::V1::WasalxPortalWorkspaceController < ApplicationController
       channel: channel_name, text: nil, recipient: nil, team: ticket.group.name,
       quoted: false, can_send: false, handover_required: handover, routing_notice: 'UNAVAILABLE' }
     if internal
-      output.merge!(text: body, can_send: true, routing_notice: 'INTERNAL_ONLY')
+      text = ArticleWriter.body_with_attachment_label(body, has_attachments: attachment_binding.any?)
+      output.merge!(text: text, can_send: true, routing_notice: 'INTERNAL_ONLY')
     elsif handover
       output[:routing_notice] = 'HANDOVER_REQUIRED'
     elsif channel_name == 'email' && reply_allowed?(ticket)
       attributes = email_reply_attributes(ticket)
-      output.merge!(text: body, recipient: attributes.fetch(:to), quoted: attributes[:in_reply_to].present?,
+      text = ArticleWriter.body_with_attachment_label(body, has_attachments: attachment_binding.any?)
+      output.merge!(text: text, recipient: attributes.fetch(:to), quoted: attributes[:in_reply_to].present?,
         can_send: true, routing_notice: 'EMAIL')
     elsif channel_name == 'whatsapp'
       prepared = Wasalx::ReplyPreview.new(actor: @actor).call(ticket_id: ticket.id.to_s, body: body,

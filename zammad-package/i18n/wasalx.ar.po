@@ -24,6 +24,9 @@ msgstr "الكل"
 msgid "All Accessible"
 msgstr "كل المجموعات المتاحة"
 
+msgid "Attachment"
+msgstr "مرفق"
+
 msgid "Attachment could not be removed. Try again."
 msgstr "تعذّرت إزالة المرفق. حاول مرة أخرى."
 

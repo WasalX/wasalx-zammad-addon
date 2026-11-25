@@ -8,6 +8,9 @@ require 'monitor'
 
 class Hash
   def to_query; URI.encode_www_form(self); end
+  def with_indifferent_access
+    transform_keys(&:to_s)
+  end
 end
 
 ROOT = File.expand_path('..', __dir__)
@@ -83,6 +86,11 @@ class Translation
     def sync_locale_from_po(locale)
       (@synced_locales ||= []) << locale
     end
+
+    def translate(locale, source)
+      catalogue = File.read(File.join(ROOT, "zammad-package/i18n/wasalx.#{locale}.po"), encoding: 'UTF-8')
+      catalogue[/^msgid "#{Regexp.escape(source)}"\r?\nmsgstr "([^"]+)"/, 1] || source
+    end
   end
 end
 
@@ -104,6 +112,10 @@ class Setting
 
     def exists?(name:)
       values.key?(name)
+    end
+
+    def get(name)
+      values.fetch(name)
     end
 
     def set(name, value)
@@ -543,8 +555,72 @@ load File.join(ROOT, 'zammad-package/app/controllers/api/v1/wasalx_controller.rb
 load File.join(ROOT, 'zammad-package/app/controllers/api/v1/wasalx_portal_workspace_controller.rb')
 load File.join(ROOT, 'zammad-package/db/addon/wasalx/202608240008_enable_wasalx_modern_desktop_ui.rb')
 load File.join(ROOT, 'zammad-package/db/addon/wasalx/202610050016_sync_wasalx_reply_preview_translations.rb')
+load File.join(ROOT, 'zammad-package/db/addon/wasalx/202610180007_sync_wasalx_attachment_translation.rb')
+
+module Validations
+  class TicketArticleValidator
+    class Default
+      attr_reader :record
+
+      def initialize(record)
+        @record = record
+      end
+
+      def validate_body
+        record.errors << :body_required if record.body.blank?
+      end
+    end
+  end
+end
+
+load File.join(ROOT, 'zammad-package/lib/validations/ticket_article_validator/wasalx_group_message.rb')
 
 class ZammadAgentPanelContractTest < Minitest::Test
+  def test_portal_article_writer_uses_the_workspace_locale_only_for_attachment_only_notes_and_email
+    Setting.set('locale_default', 'ar')
+    writer = Api::V1::WasalxPortalWorkspaceController::ArticleWriter.new(nil)
+    writer.define_singleton_method(:article_create) { |_ticket, attributes| attributes }
+
+    %w[note email].each do |type|
+      attributes = { type: type, body: '', form_id: 'verified-upload-cache' }
+      assert_equal attributes.transform_keys(&:to_s).merge('body' => 'مرفق'), writer.call(nil, attributes)
+      assert_equal 'Draft text', writer.call(nil, attributes.merge(body: 'Draft text')).fetch('body')
+      assert_equal '', writer.call(nil, attributes.merge(form_id: nil)).fetch('body')
+    end
+
+    whatsapp = { type: 'wasalx group message', body: '', form_id: 'verified-upload-cache' }
+    assert_equal whatsapp.transform_keys(&:to_s), writer.call(nil, whatsapp)
+  end
+
+  def test_wasalx_group_message_requires_body_or_a_native_attachment
+    backend = Validations::TicketArticleValidator::WasalxGroupMessage
+    assert_equal ['wasalx group message'], backend::MATCHING_TYPES
+
+    record = Struct.new(:body, :attachments, :errors).new('', [], [])
+    backend.new(record).validate_body
+    assert_equal [:body_required], record.errors
+    record.errors.clear
+
+    record.instance_variable_set(:@attachments_buffer, [{}])
+    backend.new(record).validate_body
+    assert_empty record.errors
+
+    record.instance_variable_set(:@attachments_buffer, [])
+    record.attachments = [Object.new]
+    backend.new(record).validate_body
+    assert_empty record.errors
+    assert_equal '', record.body
+  end
+
+  def test_attachment_translation_migration_syncs_arabic_without_changing_the_actor
+    Translation.synced_locales = []
+    UserInfo.with_user_id(17) do
+      SyncWasalxAttachmentTranslation.up
+      assert_equal 17, UserInfo.current_user_id
+    end
+    assert_equal ['ar'], Translation.synced_locales
+  end
+
   def test_portal_article_preview_ends_on_a_grapheme_boundary
     article_type = Struct.new(:name).new('note')
     article_class = Struct.new(:id, :ticket_id, :body, :content_type, :internal, :from, :sender,
@@ -624,6 +700,61 @@ class ZammadAgentPanelContractTest < Minitest::Test
     controller.deny_authorization = true
     assert_raises(Exceptions::Forbidden) { controller.reply_preview }
     assert_equal [Ticket.record, :agent_update_access?], controller.authorization
+    assert_empty Wasalx::Client.post_calls
+  end
+
+  def ticket_template_controller(get:, actor: FakeUser.new(%w[ticket.agent], 77, [4]))
+    controller = Api::V1::WasalxController.new
+    controller.current_user = actor
+    request = Object.new
+    request.define_singleton_method(:get?) { get }
+    controller.define_singleton_method(:request) { request }
+    controller.params = { ticket_id: '42', tenant_id: 'untrusted', connection_id: 'untrusted', group_id: 'untrusted',
+                          input: { request_token: '44000000-0000-4000-8000-000000000004', template_id: '341',
+                                   template_sha256: 'a' * 64, parameters: ['42'] } }
+    controller.params.define_singleton_method(:require) { |key| fetch(key) }
+    controller
+  end
+
+  def test_ticket_template_catalog_and_send_use_native_ticket_and_agent
+    Ticket.record.wasalx_provider = 'META'
+    Ticket.record.wasalx_bot_state = 'HUMAN'
+    expected_target = { tenant_id: ENV.fetch('WASALX_TENANT_ID'), ticket_id: 42,
+                        connection_id: Ticket.record.wasalx_connection_id, group_id: Ticket.record.wasalx_group_id }
+    catalog = { 'window' => 'CLOSED', 'templates' => [] }
+    delivery = { 'id' => '45000000-0000-4000-8000-000000000005', 'state' => 'QUEUED' }
+    Wasalx::Client.post_results = [catalog, delivery]
+
+    [[true, 'catalog', :ok, catalog], [false, 'send', :accepted, delivery]].each do |get, path, status, response|
+      controller = ticket_template_controller(get: get)
+      controller.ticket_templates
+      assert_equal [Ticket.record, :agent_update_access?], controller.authorization
+      assert_equal({ path: "/internal/v1/zammad/ticket-templates/#{path}", scope: 'zammad:outbound',
+                     actor: { user_id: 77, group_ids: [4], group_admin: false },
+                     payload: get ? expected_target : expected_target.merge(controller.params[:input]) },
+                   Wasalx::Client.post_calls.last)
+      assert_equal status, controller.rendered_status
+      assert_equal response, controller.rendered
+    end
+    assert_equal 2, Wasalx::Client.post_calls.length
+    assert_empty Ticket::Article.created_articles
+  end
+
+  def test_ticket_templates_require_an_active_human_agent_with_full_ticket_access
+    Ticket.record.wasalx_provider = 'META'
+    Ticket.record.wasalx_bot_state = 'HUMAN'
+    inactive = FakeUser.new(%w[ticket.agent], 81, [4])
+    inactive.define_singleton_method(:active) { false }
+    [true, false].each do |get|
+      rejected = [FakeUser.new([], 78, [4]), FakeUser.new(%w[ticket.agent], 79, [9]),
+                  FakeUser.new(%w[ticket.agent wasalx_service], 80, [4]), inactive]
+      rejected.each do |actor|
+        assert_raises(Exceptions::Forbidden) { ticket_template_controller(get: get, actor: actor).ticket_templates }
+      end
+      controller = ticket_template_controller(get: get)
+      controller.deny_authorization = true
+      assert_raises(Exceptions::Forbidden) { controller.ticket_templates }
+    end
     assert_empty Wasalx::Client.post_calls
   end
 
