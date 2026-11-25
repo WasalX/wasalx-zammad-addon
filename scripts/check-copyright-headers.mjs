@@ -10,7 +10,7 @@ function copyrightFindings(path, source) {
   for (const [index, line] of source.split(/\r?\n/u).entries()) {
     const match = headerLine.exec(line);
     if (!match) continue;
-    const header = match[1].replace(/\s*(?:\*\/|-->)\s*$/u, "").trim();
+    const header = match[1].replace(/\s*(?:\*\/|--!?>)\s*$/u, "").trim();
     if (!allowed.some(rule => header === rule.header && path.startsWith(rule.pathPrefix))) {
       findings.push(path + ":" + (index + 1));
     }

@@ -99,7 +99,7 @@ test("copyright guard rejects an unapproved source header", t => {
   const guard = join(repository, "scripts/check-copyright-headers.mjs");
   const file = "copyright-fixture.mjs";
   git(directory, "init", "--quiet");
-  writeFileSync(join(directory, file), "// Copyright (c) 2026 WasalX\n");
+  writeFileSync(join(directory, file), "// Copyright (c) 2026 WasalX\n<!-- Copyright (c) 2026 WasalX --!>\n");
   git(directory, "add", "--", file);
   const options = { cwd: directory, encoding: "utf8" as const, windowsHide: true, stdio: "pipe" as const };
   assert.equal(execFileSync(process.execPath, [guard], options), "");
