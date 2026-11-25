@@ -223,6 +223,9 @@ describe('WasalX template dialog', () => {
       value(this: HTMLDialogElement) { this.open = true },
     })
     const scope = 'b'.repeat(64)
+    vi.mocked(globalThis.crypto.randomUUID)
+      .mockReturnValueOnce('00000000-0000-4000-8000-000000000042')
+      .mockReturnValueOnce('00000000-0000-4000-8000-000000000043')
     const storageKey = `wasalx:ticket-template:${scope}`
     const deliveryId = '45000000-0000-4000-8000-000000000005'
     const submissions: string[] = []
