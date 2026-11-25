@@ -92,3 +92,21 @@ test("test ownership rejects a new tracked file with no runner", t => {
   assert.throws(() => assertOwned(trackedTests(directory), ciOwnedTests()),
     /Tests missing a CI runner or allowlist entry: unreferenced-guard-fixture\.test\.ts/u);
 });
+
+test("copyright guard rejects an unapproved source header", t => {
+  const directory = mkdtempSync(join(tmpdir(), "zammad-copyright-"));
+  t.after(() => rmSync(directory, { recursive: true }));
+  const guard = join(repository, "scripts/check-copyright-headers.mjs");
+  const file = "copyright-fixture.mjs";
+  git(directory, "init", "--quiet");
+  writeFileSync(join(directory, file), "// Copyright (c) 2026 WasalX\n");
+  git(directory, "add", "--", file);
+  const options = { cwd: directory, encoding: "utf8" as const, windowsHide: true, stdio: "pipe" as const };
+  assert.equal(execFileSync(process.execPath, [guard], options), "");
+
+  writeFileSync(join(directory, file), "/* Copyright (c) 2026 Unapproved Fixture Holder */\n");
+  assert.throws(() => execFileSync(process.execPath, [guard], options), {
+    status: 1,
+    stderr: file + ":1: unapproved copyright header\n",
+  });
+});

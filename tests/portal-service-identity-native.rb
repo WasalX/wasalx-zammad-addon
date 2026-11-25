@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 # Execute only in the isolated native Rails runner; all fixture writes roll back.
-# Copyright (c) 2026 Mohammed Altoyan <mohammedaltoyan@gmail.com>
+# Copyright (c) 2026 WasalX
 raise 'Isolated native diagnostic required' unless ENV['WASALX_NATIVE_DIAGNOSTIC'] == 'true'
 require 'securerandom'
 require Rails.root.join('lib/wasalx/portal_service_identity')

@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 class Api::V1::WasalxController < ApplicationController
-# Copyright (c) 2026 Mohammed Altoyan <mohammedaltoyan@gmail.com>
+# Copyright (c) 2026 WasalX
   # Authenticate the caller here, then authorize the concrete ticket in each
   # action below. `authenticate_and_authorize!` also asks Pundit for a
   # controller policy; package controllers do not own one and that would turn

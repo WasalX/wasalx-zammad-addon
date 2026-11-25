@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
-# Copyright (c) 2026 Mohammed Altoyan <mohammedaltoyan@gmail.com>
+# Copyright (c) 2026 WasalX
 class WasalxGroupWorkspaceUploadCleanupJob < ApplicationJob
   # Browser-to-control retries finish within hours. Seven days keeps a
   # deliberately conservative recovery margin without retaining abandoned

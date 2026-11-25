@@ -1,5 +1,5 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
-<!-- Copyright (c) 2026 Mohammed Altoyan <mohammedaltoyan@gmail.com> -->
+<!-- Copyright (c) 2026 WasalX -->
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { createMessage } from '@formkit/core'

@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: AGPL-3.0-only
-# Copyright (c) 2026 Mohammed Altoyan <mohammedaltoyan@gmail.com>
+# Copyright (c) 2026 WasalX
 require 'minitest/autorun'
 require_relative '../zammad-package/lib/wasalx/portal_upload_expiry'
 require_relative '../zammad-package/db/addon/wasalx/202610180004_schedule_portal_upload_expiry'

@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 # Committed, isolated two-connection race; no source or runtime credential is printed.
-# Copyright (c) 2026 Mohammed Altoyan <mohammedaltoyan@gmail.com>
+# Copyright (c) 2026 WasalX
 require 'securerandom'
 require 'timeout'
 require Rails.root.join('lib/wasalx/portal_service_identity')

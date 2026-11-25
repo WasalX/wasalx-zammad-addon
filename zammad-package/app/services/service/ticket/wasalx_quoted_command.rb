@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 require 'time'
-# Copyright (c) 2026 Mohammed Altoyan <mohammedaltoyan@gmail.com>
+# Copyright (c) 2026 WasalX
 class Service::Ticket::WasalxQuotedCommand
   def initialize(ticket:, execution_id:, current_user:)
     Wasalx::ServiceIdentity.authorize!(current_user, UserInfo.current_token)

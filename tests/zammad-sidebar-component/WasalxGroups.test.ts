@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-// Copyright (c) 2026 Mohammed Altoyan <mohammedaltoyan@gmail.com>
+// Copyright (c) 2026 WasalX
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'

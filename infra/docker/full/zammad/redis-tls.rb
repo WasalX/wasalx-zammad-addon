@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 require 'uri'
-# Copyright (c) 2026 Mohammed Altoyan <mohammedaltoyan@gmail.com>
+# Copyright (c) 2026 WasalX
 require 'openssl'
 require Rails.root.join('lib/zammad/service/redis')
 

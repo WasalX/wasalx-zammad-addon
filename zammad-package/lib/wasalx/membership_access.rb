@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 module Wasalx
-# Copyright (c) 2026 Mohammed Altoyan <mohammedaltoyan@gmail.com>
+# Copyright (c) 2026 WasalX
   module MembershipAccess
     def self.allowed?(user, bound_revision: false, interactive: false, reference: nil, session: nil, auth_type: 'session')
       return !interactive if !user
