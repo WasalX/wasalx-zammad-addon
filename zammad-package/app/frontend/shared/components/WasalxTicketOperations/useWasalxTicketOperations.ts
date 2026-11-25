@@ -137,13 +137,14 @@ export function useWasalxTicketOperations(
   })
 
   const serviceWindow = useWasalxServiceWindow(() => panel.value?.service_window_expires_at)
+  const canTrackTemplate = computed(() => panel.value?.connection.provider === 'META' && Boolean(panel.value?.ticket.bot_state))
   const canSendTemplate = computed(() =>
     serviceWindow.state.value === 'closed' &&
     panel.value?.ticket.bot_state === 'HUMAN' &&
     panel.value?.connection.provider === 'META',
   )
   const openTemplatePicker = () => {
-    if (canSendTemplate.value && ticketId.value) void openWasalxTemplateDialog(String(ticketId.value))
+    if (canTrackTemplate.value && ticketId.value) void openWasalxTemplateDialog(String(ticketId.value), label)
   }
   const connectionTone = computed(() => tone(panel.value?.connection.state))
   const deliveryTone = computed(() => tone(panel.value?.delivery.state))
@@ -343,6 +344,7 @@ export function useWasalxTicketOperations(
     retryConfirmationValid,
     serviceWindow,
     canSendTemplate,
+    canTrackTemplate,
     openTemplatePicker,
     caseHeadingId,
     formatCount,

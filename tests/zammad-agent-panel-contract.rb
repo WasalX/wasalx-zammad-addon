@@ -717,27 +717,53 @@ class ZammadAgentPanelContractTest < Minitest::Test
   end
 
   def test_ticket_template_catalog_and_send_use_native_ticket_and_agent
+    previous_secret = ENV['WASALX_SERVICE_JWT_SECRET']
+    ENV['WASALX_SERVICE_JWT_SECRET'] = 'synthetic-template-recovery-secret'
     Ticket.record.wasalx_provider = 'META'
     Ticket.record.wasalx_bot_state = 'HUMAN'
     expected_target = { tenant_id: ENV.fetch('WASALX_TENANT_ID'), ticket_id: 42,
                         connection_id: Ticket.record.wasalx_connection_id, group_id: Ticket.record.wasalx_group_id }
     catalog = { 'window' => 'CLOSED', 'templates' => [] }
     delivery = { 'id' => '45000000-0000-4000-8000-000000000005', 'state' => 'QUEUED' }
-    Wasalx::Client.post_results = [catalog, delivery]
+    recovery = ticket_template_controller(get: true)
+    recovery.params[:recovery] = '1'
+    recovery.ticket_templates
+    scope = recovery.rendered.fetch(:scope)
+    assert_match(/\A[a-f0-9]{64}\z/, scope)
+    different_agent = ticket_template_controller(get: true, actor: FakeUser.new(%w[ticket.agent], 78, [4]))
+    different_agent.params[:recovery] = '1'
+    different_agent.ticket_templates
+    refute_equal scope, different_agent.rendered.fetch(:scope)
+    Wasalx::Client.post_results = [catalog, delivery, { 'delivery' => delivery }]
 
     [[true, 'catalog', :ok, catalog], [false, 'send', :accepted, delivery]].each do |get, path, status, response|
       controller = ticket_template_controller(get: get)
+      controller.params[:input][:scope] = scope
       controller.ticket_templates
       assert_equal [Ticket.record, :agent_update_access?], controller.authorization
       assert_equal({ path: "/internal/v1/zammad/ticket-templates/#{path}", scope: 'zammad:outbound',
                      actor: { user_id: 77, group_ids: [4], group_admin: false },
-                     payload: get ? expected_target : expected_target.merge(controller.params[:input]) },
+                     payload: get ? expected_target : expected_target.merge(controller.params[:input].except(:scope)) },
                    Wasalx::Client.post_calls.last)
       assert_equal status, controller.rendered_status
       assert_equal response, controller.rendered
     end
-    assert_equal 2, Wasalx::Client.post_calls.length
+    tracker = ticket_template_controller(get: true)
+    token = tracker.params[:input][:request_token]
+    tracker.params.merge!(scope: scope, request_token: token, delivery_id: delivery.fetch('id'))
+    Ticket.record.wasalx_bot_state = 'RESOLVED'
+    tracker.ticket_templates
+    assert_equal({ path: '/internal/v1/zammad/ticket-templates/status', scope: 'zammad:outbound',
+                   actor: { user_id: 77, group_ids: [4], group_admin: false },
+                   payload: expected_target.merge(request_token: token, delivery_id: delivery.fetch('id')) },
+                 Wasalx::Client.post_calls.last)
+    assert_equal({ 'delivery' => delivery }, tracker.rendered)
+    Ticket.record.wasalx_group_id = 'changed-target'
+    assert_raises(Exceptions::Forbidden) { tracker.ticket_templates }
+    assert_equal 3, Wasalx::Client.post_calls.length
     assert_empty Ticket::Article.created_articles
+  ensure
+    ENV['WASALX_SERVICE_JWT_SECRET'] = previous_secret
   end
 
   def test_ticket_templates_require_an_active_human_agent_with_full_ticket_access

@@ -23,6 +23,8 @@ const {
   load,
   retryDelivery,
   retryEmailRouting,
+  canTrackTemplate,
+  openTemplatePicker,
 } = props.operations
 const { state: serviceWindowState, text: serviceWindowText } = props.operations.serviceWindow
 </script>
@@ -105,6 +107,12 @@ const { state: serviceWindowState, text: serviceWindowText } = props.operations.
           </dd>
         </div>
       </dl>
+      <div v-if="canTrackTemplate" class="px-3 pb-3">
+        <button type="button" class="rounded-md border border-current px-3 py-1.5 text-xs font-medium"
+          @click="openTemplatePicker">
+          {{ $t('Track template delivery') }}
+        </button>
+      </div>
     </section>
 
     <section

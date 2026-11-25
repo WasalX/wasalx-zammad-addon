@@ -639,5 +639,23 @@ msgstr "جارٍ إدراج القالب في قائمة الإرسال…"
 msgid "Template queued. Follow its delivery status on this ticket."
 msgstr "أُدرج القالب في قائمة الإرسال. تابع حالة التسليم في هذه التذكرة."
 
+msgid "Track template delivery"
+msgstr "متابعة تسليم القالب"
+
+msgid "Check template delivery status"
+msgstr "تحقّق من حالة تسليم القالب"
+
+msgid "Send another template"
+msgstr "إرسال قالب آخر"
+
+msgid "Template delivery status could not be checked."
+msgstr "تعذّر التحقّق من حالة تسليم القالب."
+
+msgid "Re-enter the same template and values to retry the previous send."
+msgstr "أعد اختيار القالب نفسه وأدخل القيم نفسها لإعادة محاولة الإرسال."
+
+msgid "This browser could not save the template request. The template was not sent."
+msgstr "تعذّر على المتصفح حفظ طلب القالب، ولم يُرسل القالب."
+
 msgid "Could not confirm the send. Retry this same template to check."
 msgstr "تعذّر تأكيد الإرسال. أعد محاولة إرسال القالب نفسه للتحقق."

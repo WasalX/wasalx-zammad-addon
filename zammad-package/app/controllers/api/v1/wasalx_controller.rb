@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 require 'digest'
+require 'openssl'
 # Copyright (c) 2026 Mohammed Altoyan <mohammedaltoyan@gmail.com>
 require_relative '../../../../lib/wasalx/reply_preview'
 require_relative '../../../../lib/wasalx/group_workspace'
@@ -94,14 +95,30 @@ class Api::V1::WasalxController < ApplicationController
       raise Exceptions::Forbidden, __('Not authorized') unless actor.active && actor.permissions?('ticket.agent') &&
         actor.group_ids_access('full').map(&:to_s).include?(ticket.group_id.to_s) && !Wasalx::ServiceIdentity.automation?(actor)
       Wasalx::MembershipAccess.check!(actor)
-      raise ActiveRecord::RecordNotFound unless ticket.wasalx_bot_state == 'HUMAN' && ticket.wasalx_provider == 'META'
+      raise ActiveRecord::RecordNotFound unless ticket.wasalx_provider == 'META'
 
       payload = { tenant_id: ENV.fetch('WASALX_TENANT_ID'), ticket_id: ticket.id,
                   connection_id: uuid!(ticket.wasalx_connection_id, 'connection'), group_id: ticket.wasalx_group_id.to_s }
-      if request.get?
+      target = JSON.generate(['ticket-template-recovery', ENV.fetch('WASALX_ZAMMAD_INSTANCE_ID'), actor.id, payload])
+      scope = OpenSSL::HMAC.hexdigest('SHA256', ENV.fetch('WASALX_SERVICE_JWT_SECRET'), target)
+      return render json: { scope: scope } if request.get? && params[:recovery] == '1'
+
+      if request.get? && (params.key?(:request_token) || params.key?(:delivery_id))
+        raise Exceptions::Forbidden, __('Not authorized') unless params[:scope] == scope
+
+        payload[:request_token] = uuid!(params[:request_token], 'template request')
+        payload[:delivery_id] = uuid!(params[:delivery_id], 'template delivery') if params.key?(:delivery_id)
+        endpoint = '/internal/v1/zammad/ticket-templates/status'
+      elsif request.get?
+        raise ActiveRecord::RecordNotFound unless ticket.wasalx_bot_state == 'HUMAN'
+
         endpoint = '/internal/v1/zammad/ticket-templates/catalog'
       else
+        raise ActiveRecord::RecordNotFound unless ticket.wasalx_bot_state == 'HUMAN'
+
         input = params.require(:input)
+        raise Exceptions::Forbidden, __('Not authorized') unless input[:scope] == scope
+
         payload.merge!(request_token: uuid!(input[:request_token], 'template request'),
                        template_id: input[:template_id], template_sha256: input[:template_sha256], parameters: input[:parameters])
         endpoint = '/internal/v1/zammad/ticket-templates/send'

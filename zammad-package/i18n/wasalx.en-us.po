@@ -54,5 +54,23 @@ msgstr "Queueing the template…"
 msgid "Template queued. Follow its delivery status on this ticket."
 msgstr "Template queued. Follow its delivery status on this ticket."
 
+msgid "Track template delivery"
+msgstr "Track template delivery"
+
+msgid "Check template delivery status"
+msgstr "Check template delivery status"
+
+msgid "Send another template"
+msgstr "Send another template"
+
+msgid "Template delivery status could not be checked."
+msgstr "Template delivery status could not be checked."
+
+msgid "Re-enter the same template and values to retry the previous send."
+msgstr "Re-enter the same template and values to retry the previous send."
+
+msgid "This browser could not save the template request. The template was not sent."
+msgstr "This browser could not save the template request. The template was not sent."
+
 msgid "Could not confirm the send. Retry this same template to check."
 msgstr "Could not confirm the send. Retry this same template to check."

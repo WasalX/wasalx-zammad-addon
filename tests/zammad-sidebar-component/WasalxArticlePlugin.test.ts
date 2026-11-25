@@ -209,7 +209,7 @@ describe('WasalX retained reply validation lifecycle', () => {
 })
 
 describe('WasalX template dialog', () => {
-  test('uses RTL and reuses an identical request after an uncertain response', async () => {
+  test('recovers without retaining inputs and starts a new request only on explicit action', async () => {
     const modulePath = `${process.cwd()}/../../zammad-package/app/frontend/shared/entities/ticket-article/action/wasalxTemplateDialog.ts`
     const { openWasalxTemplateDialog } = await import(modulePath)
     const originalLang = document.documentElement.lang
@@ -222,32 +222,72 @@ describe('WasalX template dialog', () => {
       configurable: true,
       value(this: HTMLDialogElement) { this.open = true },
     })
-    const fetchTemplate = vi.fn()
-      .mockResolvedValueOnce(Response.json({ window: 'CLOSED', templates: [{
+    const scope = 'b'.repeat(64)
+    const storageKey = `wasalx:ticket-template:${scope}`
+    const deliveryId = '45000000-0000-4000-8000-000000000005'
+    const submissions: string[] = []
+    let accepted = false
+    const fetchTemplate = vi.fn(async (url: string, init: RequestInit) => {
+      const query = new URL(url, 'https://example.test').searchParams
+      if (query.has('recovery')) return Response.json({ scope })
+      if (query.has('request_token')) {
+        expect(query.get('request_token')).toBe(JSON.parse(submissions[0]!).input.request_token)
+        if (query.has('delivery_id')) expect(query.get('delivery_id')).toBe(deliveryId)
+        return Response.json({ delivery: accepted ? { id: deliveryId, state: 'DELIVERED' } : null })
+      }
+      if (init.method === 'POST') {
+        submissions.push(String(init.body))
+        accepted = submissions.length >= 2
+        throw new TypeError('simulated lost response')
+      }
+      return Response.json({ window: 'CLOSED', templates: [{
         id: '44', name: 'order_update', language: 'ar', text: 'Order {{1}}', parameterCount: 1,
         semanticSha256: 'a'.repeat(64),
-      }] }))
-      .mockRejectedValueOnce(new TypeError('simulated lost response'))
-      .mockResolvedValueOnce(Response.json({ id: 'delivery', state: 'QUEUED' }))
+      }] })
+    })
     vi.stubGlobal('fetch', fetchTemplate)
-    try {
-      await openWasalxTemplateDialog('42')
-      const dialog = document.querySelector('dialog')!
-      expect(dialog.dir).toBe('rtl')
+    const open = async () => {
+      await openWasalxTemplateDialog('42', (state: string) => state)
+      return document.querySelector('dialog')!
+    }
+    const submit = async (dialog: HTMLDialogElement) => {
       const select = dialog.querySelector('select')!
       select.value = '44'
       select.dispatchEvent(new Event('change'))
       const input = dialog.querySelector('input')!
       expect(input.dir).toBe('auto')
-      input.value = '42'
-      const form = dialog.querySelector('form')!
-      form.dispatchEvent(new Event('submit', { cancelable: true }))
+      expect(input.value).toBe('')
+      input.value = 'synthetic order'
+      dialog.querySelector('form')!.dispatchEvent(new Event('submit', { cancelable: true }))
       await vi.waitFor(() => expect(dialog.textContent).toContain('Could not confirm'))
       expect(input.readOnly).toBe(true)
-      form.dispatchEvent(new Event('submit', { cancelable: true }))
-      await vi.waitFor(() => expect(dialog.textContent).toContain('Template queued'))
-      expect(fetchTemplate.mock.calls[1]?.[1]?.body).toBe(fetchTemplate.mock.calls[2]?.[1]?.body)
+    }
+    try {
+      let dialog = await open()
+      expect(dialog.dir).toBe('rtl')
+      await submit(dialog)
+      expect(JSON.parse(sessionStorage.getItem(storageKey)!)).toEqual({ token: JSON.parse(submissions[0]!).input.request_token })
+      dialog.remove()
+      dialog = await open()
+      expect(dialog.textContent).toContain('Re-enter the same template')
+      await submit(dialog)
+      expect(submissions[1]).toBe(submissions[0])
+      dialog.remove()
+      dialog = await open()
+      expect(dialog.textContent).toContain('DELIVERED')
+      expect(dialog.querySelector('form')).toBeNull()
+      expect(JSON.parse(sessionStorage.getItem(storageKey)!)).toEqual({
+        token: JSON.parse(submissions[0]!).input.request_token, id: deliveryId,
+      })
+      const button = (label: string) => [...dialog.querySelectorAll('button')].find(item => item.textContent === label)!
+      button('Check template delivery status').click()
+      await vi.waitFor(() => expect(button('Check template delivery status').disabled).toBe(false))
+      button('Send another template').click()
+      await vi.waitFor(() => expect(dialog.querySelector('form')).not.toBeNull())
+      await submit(dialog)
+      expect(JSON.parse(submissions[2]!).input.request_token).not.toBe(JSON.parse(submissions[0]!).input.request_token)
     } finally {
+      sessionStorage.removeItem(storageKey)
       document.querySelector('dialog')?.remove()
       document.documentElement.lang = originalLang
       document.documentElement.dir = originalDir
