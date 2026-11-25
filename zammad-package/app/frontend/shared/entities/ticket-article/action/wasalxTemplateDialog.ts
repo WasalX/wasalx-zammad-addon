@@ -111,6 +111,20 @@ export async function openWasalxTemplateDialog(ticketId: string, stateLabel: (st
     }
   })
 
+  // A resolved receipt is replaced only after the agent requests a new send.
+  another.addEventListener('click', () => {
+    try {
+      sessionStorage.removeItem(storageKey)
+    } catch {
+      status.textContent = __('Template delivery status could not be checked.')
+      return
+    }
+    recovery = undefined
+    another.hidden = refresh.hidden = true
+    status.textContent = __('Loading approved templates…')
+    void loadCatalog()
+  })
+
   try {
     const response = await request(undefined, '?recovery=1')
     if (!response.ok) throw new Error('Template recovery scope unavailable')
@@ -250,18 +264,5 @@ export async function openWasalxTemplateDialog(ticketId: string, stateLabel: (st
     select.focus()
   }
 
-  // A resolved receipt is replaced only after the agent requests a new send.
-  another.addEventListener('click', () => {
-    try {
-      sessionStorage.removeItem(storageKey)
-    } catch {
-      status.textContent = __('Template delivery status could not be checked.')
-      return
-    }
-    recovery = undefined
-    another.hidden = refresh.hidden = true
-    status.textContent = __('Loading approved templates…')
-    void loadCatalog()
-  })
   await loadCatalog()
 }
