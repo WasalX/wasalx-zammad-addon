@@ -19,7 +19,7 @@ Only these need the independent [risk-path review](https://github.com/WasalX/was
 - **Migrations, deletion, and retention** include `zammad-package/db/addon/wasalx/` and privacy, upload cleanup, and expiry code.
 - **Sign-in, authorization, tenant isolation, and secrets** include session, membership, service identity, delegation, and credential handling, plus routes, API controllers, and UI that change who can see personal data.
 - **Outbound safety** includes message and mail routing, delivery, and TLS safeguards in `zammad-package/`.
-- **Merge gates** include `.github/workflows/` and the `scripts` block of any `package.json`.
+- **Merge gates** include `.github/workflows/`, `.pre-commit-config.yaml`, `.rubocop.yml`, the `prettier` and `stylelint` configuration blocks, and the `scripts` block of any `package.json`.
 - **Production configuration and deploys** include `infra/docker/full/zammad/`, `scripts/build-zammad-package.mjs`, and `zammad-package/package-source.json`.
 
 Docs, design, UI that does not change data exposure, tests, dependency bumps, lock files, and refactors outside these areas need no independent review.
@@ -30,5 +30,6 @@ Docs, design, UI that does not change data exposure, tests, dependency bumps, lo
 - Run `pnpm run zammad:package` to build the [package definition](zammad-package/package-source.json) and its sources into a `.zpm` and manifest under [build/zammad](build/zammad/). Older source snapshots are organized by package version under [historical-source](historical-source/).
 - The add-on release is the package build pinned by the platform in [zammad-addon.json](https://github.com/WasalX/wasalx-platform/blob/main/zammad-addon.json).
 - Run `pnpm run test:package` for package tests and `pnpm run test:components` for sidebar component tests. CI supplies Ruby and the pinned platform contract files.
+- Run `pnpm run format <paths>` to format JavaScript, TypeScript, Vue, or CSS. Run `pre-commit run --files <paths>` for the [source checks](DELIVERY.md#source-checks), including Ruby lint and layout.
 - CI lints its workflows with a checksum-verified [actionlint release](https://github.com/rhysd/actionlint/releases).
 - The current package and manifest are generated during CI. CI rejects changes to tracked artifacts and unexpected untracked files under `build/zammad`, then runs the package tests, standalone Ruby contracts, sidebar component tests, and sidebar TypeScript typecheck.
