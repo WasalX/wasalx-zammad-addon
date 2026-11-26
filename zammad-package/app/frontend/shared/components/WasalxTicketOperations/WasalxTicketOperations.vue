@@ -397,7 +397,7 @@ const { state: serviceWindowState, text: serviceWindowText } =
   display: inline-flex;
   align-items: center;
   gap: 0.375rem;
-  border: 1px solid currentColor;
+  border: 1px solid currentcolor;
   border-radius: 9999px;
   padding: 0.125rem 0.5rem;
   font-size: 0.75rem;
@@ -408,7 +408,7 @@ const { state: serviceWindowState, text: serviceWindowText } =
   width: 0.375rem;
   height: 0.375rem;
   border-radius: 9999px;
-  background: currentColor;
+  background: currentcolor;
 }
 
 @media (any-pointer: coarse) {

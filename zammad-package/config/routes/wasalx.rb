@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 Zammad::Application.routes.draw do
-# Copyright (c) 2026 WasalX
+  # Copyright (c) 2026 WasalX
   get '/api/v1/wasalx/health', to: 'api/v1/wasalx_health#show'
   post '/api/v1/wasalx/service/identity', to: 'api/v1/wasalx_service_identities#create'
   get '/api/v1/wasalx/service/readiness', to: 'api/v1/wasalx#service_readiness'
@@ -14,7 +14,8 @@ Zammad::Application.routes.draw do
   get '/api/v1/wasalx/tickets/:ticket_id/templates', to: 'api/v1/wasalx#ticket_templates'
   post '/api/v1/wasalx/tickets/:ticket_id/templates', to: 'api/v1/wasalx#ticket_templates'
   post '/api/v1/wasalx/tickets/:ticket_id/reply-preview', to: 'api/v1/wasalx#reply_preview'
-  post '/api/v1/wasalx/tickets/:ticket_id/native-intents/:operation_id/reconcile-absent', to: 'api/v1/wasalx#reconcile_direct_native_intent'
+  post '/api/v1/wasalx/tickets/:ticket_id/native-intents/:operation_id/reconcile-absent',
+       to: 'api/v1/wasalx#reconcile_direct_native_intent'
   post '/api/v1/wasalx/tickets/:ticket_id/customer-close-context', to: 'api/v1/wasalx#customer_close_context'
   get '/api/v1/wasalx/tickets/:ticket_id/customer-closes/:command_id', to: 'api/v1/wasalx#customer_close'
   post '/api/v1/wasalx/tickets/:ticket_id/customer-closes/:command_id', to: 'api/v1/wasalx#customer_close'
@@ -26,15 +27,21 @@ Zammad::Application.routes.draw do
   get '/api/v1/wasalx/group_workspace/groups', to: 'api/v1/wasalx#group_workspace_groups'
   get '/api/v1/wasalx/group_workspace/groups/:group_id/messages', to: 'api/v1/wasalx#group_workspace_messages'
   get '/api/v1/wasalx/group_workspace/groups/:group_id/participants', to: 'api/v1/wasalx#group_workspace_participants'
-  get '/api/v1/wasalx/group_workspace/groups/:group_id/messages/:message_id/context', to: 'api/v1/wasalx#group_workspace_context'
+  get '/api/v1/wasalx/group_workspace/groups/:group_id/messages/:message_id/context',
+      to: 'api/v1/wasalx#group_workspace_context'
   get '/api/v1/wasalx/group_workspace/groups/:group_id/tickets', to: 'api/v1/wasalx#group_workspace_tickets'
   get '/api/v1/wasalx/group_workspace/ticket_groups', to: 'api/v1/wasalx#group_workspace_ticket_groups'
-  post '/api/v1/wasalx/group_workspace/groups/:group_id/messages/:message_id/tickets', to: 'api/v1/wasalx#group_workspace_create_ticket'
-  post '/api/v1/wasalx/group_workspace/groups/:group_id/messages/:message_id/ticket_links', to: 'api/v1/wasalx#group_workspace_link_ticket'
+  post '/api/v1/wasalx/group_workspace/groups/:group_id/messages/:message_id/tickets',
+       to: 'api/v1/wasalx#group_workspace_create_ticket'
+  post '/api/v1/wasalx/group_workspace/groups/:group_id/messages/:message_id/ticket_links',
+       to: 'api/v1/wasalx#group_workspace_link_ticket'
   post '/api/v1/wasalx/group_workspace/groups/:group_id/read', to: 'api/v1/wasalx#group_workspace_read'
   post '/api/v1/wasalx/group_workspace/groups/:group_id/send', to: 'api/v1/wasalx#group_workspace_send'
-  post '/api/v1/wasalx/group_workspace/groups/:group_id/messages/:message_id/reactions', to: 'api/v1/wasalx#group_workspace_reaction'
-  get '/api/v1/wasalx/group_workspace/groups/:group_id/messages/:message_id/media', to: 'api/v1/wasalx#group_workspace_message_media'
+  post '/api/v1/wasalx/group_workspace/groups/:group_id/messages/:message_id/reactions',
+       to: 'api/v1/wasalx#group_workspace_reaction'
+  get '/api/v1/wasalx/group_workspace/groups/:group_id/messages/:message_id/media',
+      to: 'api/v1/wasalx#group_workspace_message_media'
   get '/api/v1/wasalx/group_workspace/uploads/:upload_id/:store_id', to: 'api/v1/wasalx#group_workspace_upload'
-  delete '/api/v1/wasalx/group_workspace/uploads/:upload_id/:store_id', to: 'api/v1/wasalx#group_workspace_upload_destroy'
+  delete '/api/v1/wasalx/group_workspace/uploads/:upload_id/:store_id',
+         to: 'api/v1/wasalx#group_workspace_upload_destroy'
 end
