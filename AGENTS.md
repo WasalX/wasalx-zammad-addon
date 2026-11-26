@@ -5,8 +5,8 @@
 - Repository [WasalX/wasalx-zammad-addon](https://github.com/WasalX/wasalx-zammad-addon). The main branch is `main`.
 - Other repos: [WasalX/wasalx-platform](https://github.com/WasalX/wasalx-platform) (primary)
 - The private [WasalX project board](https://github.com/orgs/WasalX/projects/1) holds the project brief.
-- [Add-on milestones](https://github.com/WasalX/wasalx-zammad-addon/milestones) are v0.1.0 due 2026-11-30 and v0.2.0 due 2026-12-14. Each ships with its matching platform tag.
-- Lead threads are WasalX Master, WasalX Delivery, and WasalX Design.
+- [Add-on milestones](https://github.com/WasalX/wasalx-zammad-addon/milestones) are v0.1.0 (current) and v0.2.0 (next). See that page for dates and scope. Each ships with its matching platform tag.
+- Lead threads are WasalX Master, WasalX Delivery, WasalX QA, and WasalX Design.
 - UI project: yes. The sidebar and package UI follow the [WasalX design tokens](https://github.com/WasalX/wasalx-platform/blob/main/app/design-system/tokens.css).
 - The owner decides only money (any paid service), access only the owner can grant, production deployments, destructive operations on real data, making private things public, and closing a project. Project leads decide everything else within their scopes.
 - Follow the [platform agent instructions](https://github.com/WasalX/wasalx-platform/blob/main/AGENTS.md) and [platform delivery rules](https://github.com/WasalX/wasalx-platform/blob/main/DELIVERY.md) for shared rules.
