@@ -1343,7 +1343,7 @@ describe('direct ticket customer-service window', () => {
   const composers: ReturnType<typeof composer>[] = []
   const messageLists: HTMLUListElement[] = []
   const start = Date.parse('2026-08-12T10:00:00.000Z')
-  const open = (expiresAt: string | null | undefined) => {
+  const open = (expiresAt: string | null | undefined, renderMessage = true) => {
     const value = panel('SENT')
     value.connection.provider = 'META'
     if (expiresAt !== undefined) value.service_window_expires_at = expiresAt
@@ -1360,10 +1360,15 @@ describe('direct ticket customer-service window', () => {
     const messages = document.createElement('ul')
     const message = document.createElement('li')
     message.id = draft.body.props.id + '-wasalxServiceWindowClosed'
-    messages.append(message)
+    if (renderMessage) messages.append(message)
     document.body.append(messages)
     messageLists.push(messages)
-    return { ...draft, messages, wrapper: mountSidebar(true, draft.form) }
+    return {
+      ...draft,
+      message,
+      messages,
+      wrapper: mountSidebar(true, draft.form),
+    }
   }
   const line = (wrapper: VueWrapper) =>
     wrapper.find('[data-test-id="wasalx-service-window"]')
@@ -1428,6 +1433,26 @@ describe('direct ticket customer-service window', () => {
     await settle()
     expect(blocker(body)).toMatchObject({ blocking: true })
     expect(messages.querySelector('button')).not.toBeNull()
+    wrapper.unmount()
+    expect(blocker(body)).toBeUndefined()
+    expect(messages.querySelector('button')).toBeNull()
+  })
+
+  test('places the template action when FormKit renders the blocker later', async () => {
+    const { body, message, messages, wrapper } = open(
+      new Date(start - 1).toISOString(),
+      false,
+    )
+    await settle()
+    expect(blocker(body)?.blocking).toBe(true)
+    expect(messages.querySelector('button')).toBeNull()
+
+    messages.append(message)
+    await settle()
+    expect(
+      messages.querySelector('[data-test-id="wasalx-send-template"]'),
+    ).not.toBeNull()
+
     wrapper.unmount()
     expect(blocker(body)).toBeUndefined()
     expect(messages.querySelector('button')).toBeNull()

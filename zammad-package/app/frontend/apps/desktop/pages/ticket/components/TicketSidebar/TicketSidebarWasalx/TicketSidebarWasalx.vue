@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 <!-- Copyright (c) 2026 WasalX -->
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { createMessage } from '@formkit/core'
 import type { FieldEditorContext } from '#shared/components/Form/fields/FieldEditor/types.ts'
 import { attachWasalxReplyPreview } from '#shared/entities/ticket-article/action/wasalxReplyPreview.ts'
@@ -81,7 +81,7 @@ watch(
     publicWhatsAppReply,
     operations.canSendTemplate,
   ],
-  async (
+  (
     [currentForm, state, publicReply, canSendTemplate],
     _previous,
     onCleanup,
@@ -97,20 +97,26 @@ watch(
         value: operations.serviceWindow.text.value,
       }),
     )
-    let disposed = false
+    let targetObserver: MutationObserver | undefined
     onCleanup(() => {
-      disposed = true
+      targetObserver?.disconnect()
       templateTarget.value = null
       body.store.remove(windowMessageKey)
     })
     if (!canSendTemplate) return
-    await nextTick()
-    if (disposed) return
-    // The native FormKit message id is the field id followed by the message key.
-    const message = document.getElementById(
-      body.props.id + '-' + windowMessageKey,
-    )
-    templateTarget.value = message?.parentElement ?? null
+
+    const messageId = body.props.id + '-' + windowMessageKey
+    const findTarget = () => {
+      const parent = document.getElementById(messageId)?.parentElement
+      if (!parent) return
+      templateTarget.value = parent
+      targetObserver?.disconnect()
+    }
+    findTarget()
+    if (templateTarget.value) return
+    // FormKit can render the message after the editor's update has flushed.
+    targetObserver = new MutationObserver(findTarget)
+    targetObserver.observe(document.body, { childList: true, subtree: true })
   },
   { immediate: true },
 )
