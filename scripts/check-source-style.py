@@ -33,8 +33,8 @@ def prove_fixtures():
     with TemporaryDirectory(prefix=".source-style-proof-", dir=".") as directory:
         for hook in HOOKS:
             for case, exit_code, verdict in (("good", 0, "Passed"), ("bad", 1, "Failed")):
-                source, = (fixtures / hook).glob(f"{case}.*")
-                path = shutil.copy(source, directory)
+                source, = (fixtures / hook).glob(f"{case}.*.fixture")
+                path = shutil.copy(source, Path(directory) / source.stem)
                 result = run_hooks(hook, "--files", path)
                 print(f"{hook} {case} fixture (exit {result.returncode}):", flush=True)
                 print(result.stdout, end="", flush=True)
