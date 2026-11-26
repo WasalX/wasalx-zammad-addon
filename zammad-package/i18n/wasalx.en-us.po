@@ -42,8 +42,8 @@ msgstr "Approved template"
 msgid "Send template"
 msgstr "Send template"
 
-msgid "Template parameter"
-msgstr "Template parameter"
+msgid "Template parameter %s"
+msgstr "Template parameter %s"
 
 msgid "Enter a value for each template parameter."
 msgstr "Enter a value for each template parameter."

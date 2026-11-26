@@ -5,6 +5,8 @@ import * as defaultRules from '@formkit/rules'
 import { createValidationPlugin } from '@formkit/validation'
 import { describe, expect, test, vi } from 'vitest'
 
+import { i18n } from './stubs/i18n.ts'
+
 const pluginModule = `${process.cwd()}/../../zammad-package/app/frontend/shared/entities/ticket-article/action/plugins/wasalx.ts`
 const { default: plugin } = await import(pluginModule)
 
@@ -399,8 +401,17 @@ describe('WasalX template dialog', () => {
       })
     })
     vi.stubGlobal('fetch', fetchTemplate)
+    const translations: Record<string, string> = {
+      'Send WhatsApp template': 'إرسال قالب واتساب',
+      Delivered: 'تم التسليم',
+    }
+    const translate = vi
+      .spyOn(i18n, 't')
+      .mockImplementation((message) => translations[message] ?? message)
     const open = async () => {
-      await openWasalxTemplateDialog('42', (state: string) => state)
+      await openWasalxTemplateDialog('42', (state) =>
+        state === 'DELIVERED' ? 'Delivered' : state,
+      )
       return document.querySelector('dialog')!
     }
     const submit = async (dialog: HTMLDialogElement) => {
@@ -422,6 +433,7 @@ describe('WasalX template dialog', () => {
     try {
       let dialog = await open()
       expect(dialog.dir).toBe('rtl')
+      expect(dialog.querySelector('h2')?.textContent).toBe('إرسال قالب واتساب')
       await submit(dialog)
       expect(JSON.parse(sessionStorage.getItem(storageKey)!)).toEqual({
         token: JSON.parse(submissions[0]!).input.request_token,
@@ -433,7 +445,9 @@ describe('WasalX template dialog', () => {
       expect(submissions[1]).toBe(submissions[0])
       dialog.remove()
       dialog = await open()
-      expect(dialog.textContent).toContain('DELIVERED')
+      expect(dialog.querySelector('[role="status"]')?.textContent).toBe(
+        'تم التسليم',
+      )
       expect(dialog.querySelector('form')).toBeNull()
       expect(JSON.parse(sessionStorage.getItem(storageKey)!)).toEqual({
         token: JSON.parse(submissions[0]!).input.request_token,
@@ -456,6 +470,7 @@ describe('WasalX template dialog', () => {
         JSON.parse(submissions[0]!).input.request_token,
       )
     } finally {
+      translate.mockRestore()
       sessionStorage.removeItem(storageKey)
       document.querySelector('dialog')?.remove()
       document.documentElement.lang = originalLang

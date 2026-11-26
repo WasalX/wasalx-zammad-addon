@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
+import { i18n } from '#shared/i18n/index.ts'
+
 type Template = {
   id: string
   name: string
@@ -54,15 +56,15 @@ export async function openWasalxTemplateDialog(
   dialog.setAttribute('aria-labelledby', 'wasalx-template-heading')
   const heading = document.createElement('h2')
   heading.id = 'wasalx-template-heading'
-  heading.textContent = __('Send WhatsApp template')
+  heading.textContent = i18n.t('Send WhatsApp template')
   heading.className = 'text-lg font-semibold'
 
   const status = document.createElement('p')
   status.setAttribute('role', 'status')
-  status.textContent = __('Loading approved templates…')
+  status.textContent = i18n.t('Loading approved templates…')
   const close = document.createElement('button')
   close.type = 'button'
-  close.textContent = __('Close')
+  close.textContent = i18n.t('Close')
   close.className = 'rounded border px-3 py-2'
   close.autofocus = true
   close.addEventListener('click', () => dialog.close())
@@ -92,8 +94,8 @@ export async function openWasalxTemplateDialog(
     button.hidden = true
     dialog.insertBefore(button, close)
   }
-  refresh.textContent = __('Check template delivery status')
-  another.textContent = __('Send another template')
+  refresh.textContent = i18n.t('Check template delivery status')
+  another.textContent = i18n.t('Send another template')
 
   // Only opaque identifiers survive a reload. The server scopes the storage
   // key to this signed-in agent and ticket, independently of the CSRF mask.
@@ -102,7 +104,7 @@ export async function openWasalxTemplateDialog(
     recovery = value
   }
   const showReceipt = (receipt: Receipt) => {
-    status.textContent = stateLabel(receipt.state)
+    status.textContent = i18n.t(stateLabel(receipt.state))
     refresh.hidden = false
     another.hidden = !settled.has(receipt.state)
   }
@@ -135,7 +137,9 @@ export async function openWasalxTemplateDialog(
       if (receipt && dialog.open) showReceipt(receipt)
     } catch {
       another.hidden = true
-      status.textContent = __('Template delivery status could not be checked.')
+      status.textContent = i18n.t(
+        'Template delivery status could not be checked.',
+      )
     } finally {
       refresh.disabled = another.disabled = false
     }
@@ -146,12 +150,14 @@ export async function openWasalxTemplateDialog(
     try {
       sessionStorage.removeItem(storageKey)
     } catch {
-      status.textContent = __('Template delivery status could not be checked.')
+      status.textContent = i18n.t(
+        'Template delivery status could not be checked.',
+      )
       return
     }
     recovery = undefined
     another.hidden = refresh.hidden = true
-    status.textContent = __('Loading approved templates…')
+    status.textContent = i18n.t('Loading approved templates…')
     void loadCatalog()
   })
 
@@ -183,7 +189,9 @@ export async function openWasalxTemplateDialog(
       }
     }
   } catch {
-    status.textContent = __('Template delivery status could not be checked.')
+    status.textContent = i18n.t(
+      'Template delivery status could not be checked.',
+    )
     return
   }
 
@@ -201,19 +209,21 @@ export async function openWasalxTemplateDialog(
       if (catalog.window !== 'CLOSED') {
         status.textContent =
           catalog.window === 'OPEN'
-            ? __('The customer-service window is open. Use Reply on WhatsApp.')
-            : __('The customer-service window could not be verified.')
+            ? i18n.t(
+                'The customer-service window is open. Use Reply on WhatsApp.',
+              )
+            : i18n.t('The customer-service window could not be verified.')
         return
       }
       templates = catalog.templates
       if (!templates.length) {
-        status.textContent = __(
+        status.textContent = i18n.t(
           'There are no approved templates available for this ticket.',
         )
         return
       }
     } catch {
-      status.textContent = __(
+      status.textContent = i18n.t(
         'Approved templates could not be loaded. Close this window and try again.',
       )
       return
@@ -226,12 +236,12 @@ export async function openWasalxTemplateDialog(
     const select = document.createElement('select')
     select.className = 'w-full rounded border bg-transparent p-2'
     select.required = true
-    select.append(new Option(__('Select an approved template'), ''))
+    select.append(new Option(i18n.t('Select an approved template'), ''))
     for (const template of templates)
       select.append(
         new Option(`${template.name} (${template.language})`, template.id),
       )
-    label.append(__('Approved template'), select)
+    label.append(i18n.t('Approved template'), select)
     const body = document.createElement('p')
     body.className = 'whitespace-pre-wrap wrap-break-word rounded border p-2'
     body.dir = 'auto'
@@ -240,7 +250,7 @@ export async function openWasalxTemplateDialog(
     parameters.className = 'grid gap-2'
     const send = document.createElement('button')
     send.type = 'submit'
-    send.textContent = __('Send template')
+    send.textContent = i18n.t('Send template')
     send.className = 'rounded border px-3 py-2 font-semibold'
     send.disabled = true
 
@@ -264,7 +274,7 @@ export async function openWasalxTemplateDialog(
           input.dir = 'auto'
           input.maxLength = 1024
           input.required = true
-          parameter.append(`${__('Template parameter')} ${index + 1}`, input)
+          parameter.append(i18n.t('Template parameter %s', index + 1), input)
           parameters.append(parameter)
           return input
         },
@@ -276,7 +286,9 @@ export async function openWasalxTemplateDialog(
       if (!selected || send.disabled) return
       const values = fields.map((field) => field.value.trim())
       if (values.some((value) => !value)) {
-        status.textContent = __('Enter a value for each template parameter.')
+        status.textContent = i18n.t(
+          'Enter a value for each template parameter.',
+        )
         fields[values.indexOf('')]?.focus()
         return
       }
@@ -284,14 +296,14 @@ export async function openWasalxTemplateDialog(
       try {
         save({ token })
       } catch {
-        status.textContent = __(
+        status.textContent = i18n.t(
           'This browser could not save the template request. The template was not sent.',
         )
         return
       }
       send.disabled = close.disabled = select.disabled = true
       for (const field of fields) field.readOnly = true
-      status.textContent = __('Queueing the template…')
+      status.textContent = i18n.t('Queueing the template…')
       try {
         const response = await request({
           scope: recoveryScope,
@@ -308,7 +320,7 @@ export async function openWasalxTemplateDialog(
         form.remove()
         showReceipt(receipt)
       } catch {
-        status.textContent = __(
+        status.textContent = i18n.t(
           'Could not confirm the send. Retry this same template to check.',
         )
         send.disabled = false
@@ -320,7 +332,9 @@ export async function openWasalxTemplateDialog(
     })
     form.append(label, body, parameters, send)
     status.textContent = recovery
-      ? __('Re-enter the same template and values to retry the previous send.')
+      ? i18n.t(
+          'Re-enter the same template and values to retry the previous send.',
+        )
       : ''
     dialog.insertBefore(form, status)
     select.focus()

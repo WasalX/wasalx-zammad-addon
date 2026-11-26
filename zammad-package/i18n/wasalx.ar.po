@@ -627,8 +627,8 @@ msgstr "القالب المعتمد"
 msgid "Send template"
 msgstr "إرسال القالب"
 
-msgid "Template parameter"
-msgstr "متغيّر القالب"
+msgid "Template parameter %s"
+msgstr "متغيّر القالب %s"
 
 msgid "Enter a value for each template parameter."
 msgstr "أدخل قيمة لكل متغيّر في القالب."
