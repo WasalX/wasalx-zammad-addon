@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 module Wasalx
-# Copyright (c) 2026 Mohammed Altoyan <mohammedaltoyan@gmail.com>
+# Copyright (c) 2026 WasalX
   # 7.1.3 EmailAddress callbacks implicitly select a sender for the sole initial
   # group. A saved WasalX mailbox draft must wait for explicit verified activation.
   module MailboxAddressDraft

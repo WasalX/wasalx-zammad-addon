@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 require Rails.root.join('lib/wasalx/portal_mailbox_administration')
-# Copyright (c) 2026 Mohammed Altoyan <mohammedaltoyan@gmail.com>
+# Copyright (c) 2026 WasalX
 require Rails.root.join('lib/wasalx/mailbox_verification')
 require Rails.root.join('lib/wasalx/required_smtp_tls')
 require Rails.root.join('lib/wasalx/mailbox_address_draft')

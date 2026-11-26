@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 require 'openssl'
-# Copyright (c) 2026 Mohammed Altoyan <mohammedaltoyan@gmail.com>
+# Copyright (c) 2026 WasalX
 
 class Api::V1::WasalxRoutingConfigurationsController < ApplicationController
   prepend_before_action :authentication_check

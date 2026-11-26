@@ -10,29 +10,46 @@ type Template = {
 }
 type Receipt = { id: string; state: string }
 type Recovery = { token: string; id?: string }
-const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i
+const uuid =
+  /^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i
 const settled = new Set(['SENT', 'DELIVERED', 'READ', 'FAILED_TERMINAL'])
 
-export async function openWasalxTemplateDialog(ticketId: string, stateLabel: (state: string) => string) {
-  if (!/^[1-9][0-9]{0,15}$/.test(ticketId) || document.getElementById('wasalx-template-dialog')) return
+export async function openWasalxTemplateDialog(
+  ticketId: string,
+  stateLabel: (state: string) => string,
+) {
+  if (
+    !/^[1-9][0-9]{0,15}$/.test(ticketId) ||
+    document.getElementById('wasalx-template-dialog')
+  )
+    return
 
   const trigger = document.activeElement
   const endpoint = `/api/v1/wasalx/tickets/${ticketId}/templates`
-  const csrf = document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content
-  const request = (body?: object, query = '') => fetch(endpoint + query, {
-    method: body ? 'POST' : 'GET',
-    credentials: 'same-origin',
-    cache: 'no-store',
-    signal: AbortSignal.timeout(20_000),
-    headers: { Accept: 'application/json', ...(csrf ? { 'X-CSRF-Token': csrf } : {}),
-      ...(body ? { 'Content-Type': 'application/json' } : {}) },
-    ...(body ? { body: JSON.stringify({ input: body }) } : {}),
-  })
+  const csrf = document.querySelector<HTMLMetaElement>(
+    'meta[name="csrf-token"]',
+  )?.content
+  const request = (body?: object, query = '') =>
+    fetch(endpoint + query, {
+      method: body ? 'POST' : 'GET',
+      credentials: 'same-origin',
+      cache: 'no-store',
+      signal: AbortSignal.timeout(20_000),
+      headers: {
+        Accept: 'application/json',
+        ...(csrf ? { 'X-CSRF-Token': csrf } : {}),
+        ...(body ? { 'Content-Type': 'application/json' } : {}),
+      },
+      ...(body ? { body: JSON.stringify({ input: body }) } : {}),
+    })
 
   const dialog = document.createElement('dialog')
   dialog.id = 'wasalx-template-dialog'
-  dialog.dir = document.documentElement.dir || (/^ar(?:-|$)/i.test(document.documentElement.lang) ? 'rtl' : 'ltr')
-  dialog.className = 'rounded-lg border bg-white p-5 text-start text-black dark:bg-gray-900 dark:text-white'
+  dialog.dir =
+    document.documentElement.dir ||
+    (/^ar(?:-|$)/i.test(document.documentElement.lang) ? 'rtl' : 'ltr')
+  dialog.className =
+    'rounded-lg border bg-white p-5 text-start text-black dark:bg-gray-900 dark:text-white'
   dialog.style.inlineSize = 'min(32rem, calc(100% - 2rem))'
   dialog.setAttribute('aria-labelledby', 'wasalx-template-heading')
   const heading = document.createElement('h2')
@@ -49,13 +66,17 @@ export async function openWasalxTemplateDialog(ticketId: string, stateLabel: (st
   close.className = 'rounded border px-3 py-2'
   close.autofocus = true
   close.addEventListener('click', () => dialog.close())
-  dialog.addEventListener('cancel', event => {
+  dialog.addEventListener('cancel', (event) => {
     if (close.disabled) event.preventDefault()
   })
-  dialog.addEventListener('close', () => {
-    dialog.remove()
-    if (trigger instanceof HTMLElement && trigger.isConnected) trigger.focus()
-  }, { once: true })
+  dialog.addEventListener(
+    'close',
+    () => {
+      dialog.remove()
+      if (trigger instanceof HTMLElement && trigger.isConnected) trigger.focus()
+    },
+    { once: true },
+  )
   dialog.append(heading, status, close)
   document.body.append(dialog)
   dialog.showModal()
@@ -87,14 +108,22 @@ export async function openWasalxTemplateDialog(ticketId: string, stateLabel: (st
   }
   const recover = async () => {
     if (!recovery) return null
-    const query = new URLSearchParams({ request_token: recovery.token, scope: recoveryScope })
+    const query = new URLSearchParams({
+      request_token: recovery.token,
+      scope: recoveryScope,
+    })
     if (recovery.id) query.set('delivery_id', recovery.id)
     const response = await request(undefined, `?${query}`)
     if (!response.ok) throw new Error('Template receipt unavailable')
-    const { delivery } = await response.json() as { delivery: Receipt | null }
+    const { delivery } = (await response.json()) as { delivery: Receipt | null }
     if (!dialog.open) return null
     if (delivery === null && !recovery.id) return null
-    if (!delivery || !uuid.test(delivery.id) || (recovery.id && recovery.id !== delivery.id) || typeof delivery.state !== 'string')
+    if (
+      !delivery ||
+      !uuid.test(delivery.id) ||
+      (recovery.id && recovery.id !== delivery.id) ||
+      typeof delivery.state !== 'string'
+    )
       throw new Error('Invalid template receipt')
     save({ token: recovery.token, id: delivery.id })
     return delivery
@@ -129,15 +158,21 @@ export async function openWasalxTemplateDialog(ticketId: string, stateLabel: (st
   try {
     const response = await request(undefined, '?recovery=1')
     if (!response.ok) throw new Error('Template recovery scope unavailable')
-    const { scope } = await response.json() as { scope: string }
-    if (typeof scope !== 'string' || !/^[a-f0-9]{64}$/.test(scope)) throw new Error('Invalid template recovery scope')
+    const { scope } = (await response.json()) as { scope: string }
+    if (typeof scope !== 'string' || !/^[a-f0-9]{64}$/.test(scope))
+      throw new Error('Invalid template recovery scope')
     recoveryScope = scope
     storageKey = `wasalx:ticket-template:${scope}`
     const saved = sessionStorage.getItem(storageKey)
     if (saved !== null) {
       const value = JSON.parse(saved) as Recovery
-      if (!value || typeof value.token !== 'string' || !uuid.test(value.token) ||
-        (value.id !== undefined && (typeof value.id !== 'string' || !uuid.test(value.id))))
+      if (
+        !value ||
+        typeof value.token !== 'string' ||
+        !uuid.test(value.token) ||
+        (value.id !== undefined &&
+          (typeof value.id !== 'string' || !uuid.test(value.id)))
+      )
         throw new Error('Invalid template recovery record')
       recovery = value
       const receipt = await recover()
@@ -158,21 +193,29 @@ export async function openWasalxTemplateDialog(ticketId: string, stateLabel: (st
     try {
       const response = await request()
       if (!response.ok) throw new Error('Catalog unavailable')
-      const catalog = await response.json() as { window: 'OPEN' | 'CLOSED' | 'UNKNOWN'; templates: Template[] }
+      const catalog = (await response.json()) as {
+        window: 'OPEN' | 'CLOSED' | 'UNKNOWN'
+        templates: Template[]
+      }
       if (!dialog.open) return
       if (catalog.window !== 'CLOSED') {
-        status.textContent = catalog.window === 'OPEN'
-          ? __('The customer-service window is open. Use Reply on WhatsApp.')
-          : __('The customer-service window could not be verified.')
+        status.textContent =
+          catalog.window === 'OPEN'
+            ? __('The customer-service window is open. Use Reply on WhatsApp.')
+            : __('The customer-service window could not be verified.')
         return
       }
       templates = catalog.templates
       if (!templates.length) {
-        status.textContent = __('There are no approved templates available for this ticket.')
+        status.textContent = __(
+          'There are no approved templates available for this ticket.',
+        )
         return
       }
     } catch {
-      status.textContent = __('Approved templates could not be loaded. Close this window and try again.')
+      status.textContent = __(
+        'Approved templates could not be loaded. Close this window and try again.',
+      )
       return
     }
 
@@ -184,7 +227,10 @@ export async function openWasalxTemplateDialog(ticketId: string, stateLabel: (st
     select.className = 'w-full rounded border bg-transparent p-2'
     select.required = true
     select.append(new Option(__('Select an approved template'), ''))
-    for (const template of templates) select.append(new Option(`${template.name} (${template.language})`, template.id))
+    for (const template of templates)
+      select.append(
+        new Option(`${template.name} (${template.language})`, template.id),
+      )
     label.append(__('Approved template'), select)
     const body = document.createElement('p')
     body.className = 'whitespace-pre-wrap wrap-break-word rounded border p-2'
@@ -201,32 +247,35 @@ export async function openWasalxTemplateDialog(ticketId: string, stateLabel: (st
     let selected: Template | undefined
     let fields: HTMLInputElement[] = []
     select.addEventListener('change', () => {
-      selected = templates.find(template => template.id === select.value)
+      selected = templates.find((template) => template.id === select.value)
       body.hidden = !selected
       body.lang = selected?.language.replaceAll('_', '-') ?? ''
       body.textContent = selected?.text ?? ''
       send.disabled = !selected
       parameters.replaceChildren()
-      fields = Array.from({ length: selected?.parameterCount ?? 0 }, (_, index) => {
-        const parameter = document.createElement('label')
-        parameter.className = 'grid gap-1'
-        const input = document.createElement('input')
-        input.className = 'rounded border bg-transparent p-2'
-        input.type = 'text'
-        input.dir = 'auto'
-        input.maxLength = 1024
-        input.required = true
-        parameter.append(`${__('Template parameter')} ${index + 1}`, input)
-        parameters.append(parameter)
-        return input
-      })
+      fields = Array.from(
+        { length: selected?.parameterCount ?? 0 },
+        (_, index) => {
+          const parameter = document.createElement('label')
+          parameter.className = 'grid gap-1'
+          const input = document.createElement('input')
+          input.className = 'rounded border bg-transparent p-2'
+          input.type = 'text'
+          input.dir = 'auto'
+          input.maxLength = 1024
+          input.required = true
+          parameter.append(`${__('Template parameter')} ${index + 1}`, input)
+          parameters.append(parameter)
+          return input
+        },
+      )
     })
 
-    form.addEventListener('submit', async event => {
+    form.addEventListener('submit', async (event) => {
       event.preventDefault()
       if (!selected || send.disabled) return
-      const values = fields.map(field => field.value.trim())
-      if (values.some(value => !value)) {
+      const values = fields.map((field) => field.value.trim())
+      if (values.some((value) => !value)) {
         status.textContent = __('Enter a value for each template parameter.')
         fields[values.indexOf('')]?.focus()
         return
@@ -235,23 +284,33 @@ export async function openWasalxTemplateDialog(ticketId: string, stateLabel: (st
       try {
         save({ token })
       } catch {
-        status.textContent = __('This browser could not save the template request. The template was not sent.')
+        status.textContent = __(
+          'This browser could not save the template request. The template was not sent.',
+        )
         return
       }
       send.disabled = close.disabled = select.disabled = true
       for (const field of fields) field.readOnly = true
       status.textContent = __('Queueing the template…')
       try {
-        const response = await request({ scope: recoveryScope, request_token: token, template_id: selected.id,
-          template_sha256: selected.semanticSha256, parameters: values })
+        const response = await request({
+          scope: recoveryScope,
+          request_token: token,
+          template_id: selected.id,
+          template_sha256: selected.semanticSha256,
+          parameters: values,
+        })
         if (!response.ok) throw new Error('Template delivery unavailable')
-        const receipt = await response.json() as Receipt
-        if (!uuid.test(receipt.id) || typeof receipt.state !== 'string') throw new Error('Invalid template receipt')
+        const receipt = (await response.json()) as Receipt
+        if (!uuid.test(receipt.id) || typeof receipt.state !== 'string')
+          throw new Error('Invalid template receipt')
         save({ token, id: receipt.id })
         form.remove()
         showReceipt(receipt)
       } catch {
-        status.textContent = __('Could not confirm the send. Retry this same template to check.')
+        status.textContent = __(
+          'Could not confirm the send. Retry this same template to check.',
+        )
         send.disabled = false
       } finally {
         close.disabled = false
@@ -260,7 +319,9 @@ export async function openWasalxTemplateDialog(ticketId: string, stateLabel: (st
       }
     })
     form.append(label, body, parameters, send)
-    status.textContent = recovery ? __('Re-enter the same template and values to retry the previous send.') : ''
+    status.textContent = recovery
+      ? __('Re-enter the same template and values to retry the previous send.')
+      : ''
     dialog.insertBefore(form, status)
     select.focus()
   }

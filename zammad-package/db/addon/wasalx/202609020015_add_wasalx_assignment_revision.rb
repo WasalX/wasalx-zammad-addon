@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
-# Copyright (c) 2026 Mohammed Altoyan <mohammedaltoyan@gmail.com>
+# Copyright (c) 2026 WasalX
 # A database-owned revision detects assignment changes even when group/owner
 # later return to their original values. It is intentionally not registered in
 # Object Manager, so agents and API callers cannot set it.

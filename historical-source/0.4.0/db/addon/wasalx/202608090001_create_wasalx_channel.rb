@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 class CreateWasalxChannel
-# Copyright (c) 2026 Mohammed Altoyan <mohammedaltoyan@gmail.com>
+# Copyright (c) 2026 WasalX
   ATTRIBUTES = {
     wasalx_reference: 'WasalX reference', wasalx_group_id: 'WasalX group ID',
     wasalx_group_name: 'WasalX group', wasalx_connection_id: 'WasalX connection ID',

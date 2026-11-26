@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 require 'digest'
 require 'openssl'
-# Copyright (c) 2026 Mohammed Altoyan <mohammedaltoyan@gmail.com>
+# Copyright (c) 2026 WasalX
 require_relative '../../../../lib/wasalx/reply_preview'
 require_relative '../../../../lib/wasalx/group_workspace'
 

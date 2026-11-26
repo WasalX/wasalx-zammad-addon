@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
-# Copyright (c) 2026 Mohammed Altoyan <mohammedaltoyan@gmail.com>
+# Copyright (c) 2026 WasalX
 # Shared by delivery and read-only composer preview. Resolve native article IDs
 # here; only the control plane can resolve their tenant-bound provider identity.
 class Service::Ticket::WasalxReplyContext < Service::Base

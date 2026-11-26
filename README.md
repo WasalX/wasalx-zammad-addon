@@ -45,3 +45,10 @@ the tab. If queueing cannot be confirmed and no receipt is available yet,
 re-enter the same template and values to retry the original request. The
 browser keeps only the recovery identifiers. Use **Send another template**
 when the prior send has settled.
+
+## Rebuild retained packages
+
+Run `node historical-source/rebuild.mjs <output-directory>` from a Git clone
+with the source revision identified by the [rebuild script](historical-source/rebuild.mjs)
+available locally. The script rebuilds the retained packages from that revision
+and verifies their original hashes.

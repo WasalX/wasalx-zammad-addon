@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 class AddTenantServiceIdentity
-# Copyright (c) 2026 Mohammed Altoyan <mohammedaltoyan@gmail.com>
+# Copyright (c) 2026 WasalX
   def self.up
     %w[wasalx_service wasalx_privacy].each do |name|
       Permission.create_if_not_exists(name: name, label: 'Tenant automation', description: 'Governed noninteractive tenant integration', preferences: {})

@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
-# Copyright (c) 2026 Mohammed Altoyan <mohammedaltoyan@gmail.com>
+# Copyright (c) 2026 WasalX
 # A browser retry must resolve the exact ticket article created by the first
 # request. Article preferences are serialized and are not a safe unique key,
 # so the package owns one small indexed operation key instead of scanning them.
