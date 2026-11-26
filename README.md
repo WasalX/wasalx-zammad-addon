@@ -34,6 +34,18 @@ the ticket when the source still matches. The internal note uses Arabic when
 Zammad's default language is Arabic, and English otherwise. Use the WasalX
 action to replay it after resolving the failure.
 
+### Send an approved WhatsApp template
+
+On a direct WhatsApp ticket assigned to an agent, select **Send WhatsApp template**
+beside the closed-window message in the public reply composer. On mobile, the
+same action is in the ticket's WasalX operations. Choose an approved template,
+review its body and fill its parameters. Use **Track template delivery** in the
+ticket's WasalX panel to check that send after closing the dialog or reloading
+the tab. If queueing cannot be confirmed and no receipt is available yet,
+re-enter the same template and values to retry the original request. The
+browser keeps only the recovery identifiers. Use **Send another template**
+when the prior send has settled.
+
 ## Rebuild retained packages
 
 Run `node historical-source/rebuild.mjs <output-directory>` from a Git clone

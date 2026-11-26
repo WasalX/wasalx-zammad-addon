@@ -11,3 +11,66 @@ msgstr "Attachment"
 
 msgid "wasalx.email_routing.terminal_failure_note"
 msgstr "WasalX could not apply this email routing decision. Review the routing setup, then retry from the WasalX action."
+
+msgid "Send WhatsApp template"
+msgstr "Send WhatsApp template"
+
+msgid "Close"
+msgstr "Close"
+
+msgid "Loading approved templates…"
+msgstr "Loading approved templates…"
+
+msgid "The customer-service window is open. Use Reply on WhatsApp."
+msgstr "The customer-service window is open. Use Reply on WhatsApp."
+
+msgid "The customer-service window could not be verified."
+msgstr "The customer-service window could not be verified."
+
+msgid "There are no approved templates available for this ticket."
+msgstr "There are no approved templates available for this ticket."
+
+msgid "Approved templates could not be loaded. Close this window and try again."
+msgstr "Approved templates could not be loaded. Close this window and try again."
+
+msgid "Select an approved template"
+msgstr "Select an approved template"
+
+msgid "Approved template"
+msgstr "Approved template"
+
+msgid "Send template"
+msgstr "Send template"
+
+msgid "Template parameter %s"
+msgstr "Template parameter %s"
+
+msgid "Enter a value for each template parameter."
+msgstr "Enter a value for each template parameter."
+
+msgid "Queueing the template…"
+msgstr "Queueing the template…"
+
+msgid "Template queued. Follow its delivery status on this ticket."
+msgstr "Template queued. Follow its delivery status on this ticket."
+
+msgid "Track template delivery"
+msgstr "Track template delivery"
+
+msgid "Check template delivery status"
+msgstr "Check template delivery status"
+
+msgid "Send another template"
+msgstr "Send another template"
+
+msgid "Template delivery status could not be checked."
+msgstr "Template delivery status could not be checked."
+
+msgid "Re-enter the same template and values to retry the previous send."
+msgstr "Re-enter the same template and values to retry the previous send."
+
+msgid "This browser could not save the template request. The template was not sent."
+msgstr "This browser could not save the template request. The template was not sent."
+
+msgid "Could not confirm the send. Retry this same template to check."
+msgstr "Could not confirm the send. Retry this same template to check."
