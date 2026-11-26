@@ -104,9 +104,16 @@ test("copyright guard rejects an unapproved source header", t => {
   const options = { cwd: directory, encoding: "utf8" as const, windowsHide: true, stdio: "pipe" as const };
   assert.equal(execFileSync(process.execPath, [guard], options), "");
 
-  writeFileSync(join(directory, file), "/* Copyright (c) 2026 Unapproved Fixture Holder */\n");
+  const unapproved = "Copyright (c) 2026 Unapproved Fixture Holder";
+  const headers = [
+    "## " + unapproved,
+    "/// " + unapproved,
+    "<!-- " + unapproved + " -->",
+    "/* " + unapproved + " */",
+  ];
+  writeFileSync(join(directory, file), headers.join("\n") + "\n");
   assert.throws(() => execFileSync(process.execPath, [guard], options), {
     status: 1,
-    stderr: file + ":1: unapproved copyright header\n",
+    stderr: headers.map((_, index) => file + ":" + (index + 1) + ": unapproved copyright header\n").join(""),
   });
 });
