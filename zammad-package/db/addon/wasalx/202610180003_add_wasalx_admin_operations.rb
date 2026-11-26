@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 class AddWasalxAdminOperations
-# Copyright (c) 2026 Mohammed Altoyan <mohammedaltoyan@gmail.com>
+# Copyright (c) 2026 WasalX
   def self.up
     return if ActiveRecord::Migration.table_exists?(:wasalx_admin_operations)
     ActiveRecord::Migration.create_table :wasalx_admin_operations do |table|

@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 class AddWasalxSessionRefresh
-# Copyright (c) 2026 Mohammed Altoyan <mohammedaltoyan@gmail.com>
+# Copyright (c) 2026 WasalX
   def self.up
     column = ActiveRecord::Migration.connection.columns(:sessions).find do |entry|
       entry.name == 'wasalx_oidc_refresh_state'

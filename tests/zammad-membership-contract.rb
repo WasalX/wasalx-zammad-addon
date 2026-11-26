@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 # SPDX-License-Identifier: AGPL-3.0-only
-# Copyright (c) 2026 Mohammed Altoyan <mohammedaltoyan@gmail.com>
+# Copyright (c) 2026 WasalX
 require 'minitest/autorun'
 require 'ostruct'
 require 'json'

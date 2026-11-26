@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 raise 'Isolated native diagnostic required' unless ENV['WASALX_NATIVE_DIAGNOSTIC'] == 'true'
-# Copyright (c) 2026 Mohammed Altoyan <mohammedaltoyan@gmail.com>
+# Copyright (c) 2026 WasalX
 require Rails.root.join('lib/wasalx/portal_service_identity')
 require Rails.root.join('app/controllers/api/v1/wasalx_service_identities_controller')
 assert = ->(value, message) { raise message unless value }

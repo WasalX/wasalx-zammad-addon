@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 class ExtendWasalxTicketOperationCancellation
-# Copyright (c) 2026 Mohammed Altoyan <mohammedaltoyan@gmail.com>
+# Copyright (c) 2026 WasalX
   CONSTRAINT = 'wasalx_ticket_operations_ticket_presence'.freeze
 
   def self.up

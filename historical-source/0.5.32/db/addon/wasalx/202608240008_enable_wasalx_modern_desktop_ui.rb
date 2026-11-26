@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
-# Copyright (c) 2026 Mohammed Altoyan <mohammedaltoyan@gmail.com>
+# Copyright (c) 2026 WasalX
 # WasalX agent surfaces are compiled into Zammad's maintained desktop app.
 # Enable Zammad's own availability switch for every eligible role; the legacy
 # interface remains available as the supported fallback.

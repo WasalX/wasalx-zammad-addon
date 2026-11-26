@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 module Wasalx
-# Copyright (c) 2026 Mohammed Altoyan <mohammedaltoyan@gmail.com>
+# Copyright (c) 2026 WasalX
   module RequiredSmtpTLS
     def build_smtp_params(options)
       result = super

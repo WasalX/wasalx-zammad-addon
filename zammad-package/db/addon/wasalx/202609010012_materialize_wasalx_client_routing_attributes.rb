@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
-# Copyright (c) 2026 Mohammed Altoyan <mohammedaltoyan@gmail.com>
+# Copyright (c) 2026 WasalX
 # Object Manager metadata alone does not guarantee that these package-owned
 # ticket columns exist after a package upgrade.
 class MaterializeWasalxClientRoutingAttributes
