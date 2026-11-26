@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
-# Copyright (c) 2026 Mohammed Altoyan <mohammedaltoyan@gmail.com>
+# Copyright (c) 2026 WasalX
 # Schedules WasalX communication only for a committed, public article that an
 # agent deliberately created with the WasalX article type. Inbound customer
 # articles, system articles, notes, and imports are deliberately non-communicative.

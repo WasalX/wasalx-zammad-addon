@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
-# Copyright (c) 2026 Mohammed Altoyan <mohammedaltoyan@gmail.com>
+# Copyright (c) 2026 WasalX
 class WasalxTicketRoutingJob < ApplicationJob
   retry_on Wasalx::Client::TemporaryRequestFailed, attempts: 8, wait: lambda { |executions|
     [executions * executions * 30.seconds, 15.minutes].min

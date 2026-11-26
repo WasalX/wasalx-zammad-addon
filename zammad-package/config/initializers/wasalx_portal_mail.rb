@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 require Rails.root.join('lib/wasalx/portal_mail')
-# Copyright (c) 2026 Mohammed Altoyan <mohammedaltoyan@gmail.com>
+# Copyright (c) 2026 WasalX
 
 Rails.application.config.to_prepare do
   target = NotificationFactory.singleton_class

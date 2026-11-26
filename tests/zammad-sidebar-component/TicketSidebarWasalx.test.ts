@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-// Copyright (c) 2026 Mohammed Altoyan <mohammedaltoyan@gmail.com>
+// Copyright (c) 2026 WasalX
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { createNode, type FormKitNode } from '@formkit/core'
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'

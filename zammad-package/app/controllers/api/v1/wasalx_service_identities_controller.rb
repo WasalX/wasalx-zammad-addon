@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 require_relative '../../../../lib/wasalx/portal_service_identity'
-# Copyright (c) 2026 Mohammed Altoyan <mohammedaltoyan@gmail.com>
+# Copyright (c) 2026 WasalX
 
 class Api::V1::WasalxServiceIdentitiesController < Api::V1::WasalxPortalWorkspaceController
   def create

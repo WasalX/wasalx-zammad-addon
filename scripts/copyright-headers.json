@@ -1,0 +1,7 @@
+[
+  { "header": "Copyright (c) 2026 WasalX", "pathPrefix": "" },
+  {
+    "header": "Copyright (C) 2012-2026 Zammad Foundation, https://zammad-foundation.org/",
+    "pathPrefix": "tests/fixtures/zammad-7.1.3/"
+  }
+]

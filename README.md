@@ -33,3 +33,10 @@ the job, ticket, and source article IDs and records the terminal failure on
 the ticket when the source still matches. The internal note uses Arabic when
 Zammad's default language is Arabic, and English otherwise. Use the WasalX
 action to replay it after resolving the failure.
+
+## Rebuild retained packages
+
+Run `node historical-source/rebuild.mjs <output-directory>` from a Git clone
+with the source revision identified by the [rebuild script](historical-source/rebuild.mjs)
+available locally. The script rebuilds the retained packages from that revision
+and verifies their original hashes.

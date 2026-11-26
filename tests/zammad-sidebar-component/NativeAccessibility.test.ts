@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-// Copyright (c) 2026 Mohammed Altoyan <mohammedaltoyan@gmail.com>
+// Copyright (c) 2026 WasalX
 import { readFileSync } from 'node:fs'
 import { afterEach, describe, expect, test } from 'vitest'
 import axe from 'axe-core'

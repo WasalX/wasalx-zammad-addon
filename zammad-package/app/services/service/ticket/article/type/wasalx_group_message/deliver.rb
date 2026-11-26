@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
-# Copyright (c) 2026 Mohammed Altoyan <mohammedaltoyan@gmail.com>
+# Copyright (c) 2026 WasalX
 class Service::Ticket::Article::Type::WasalxGroupMessage::Deliver < Service::Base
   ARTICLE_TYPE = 'wasalx group message'.freeze
   MAX_ATTACHMENTS = 10

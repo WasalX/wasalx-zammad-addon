@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
-# Copyright (c) 2026 Mohammed Altoyan <mohammedaltoyan@gmail.com>
+# Copyright (c) 2026 WasalX
 class AddDirectKeepOpen
   ATTRIBUTES = {
     wasalx_bot_keep_open: 'WasalX direct keep open'

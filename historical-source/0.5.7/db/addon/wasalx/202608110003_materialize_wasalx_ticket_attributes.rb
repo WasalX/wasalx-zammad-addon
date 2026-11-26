@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
-# Copyright (c) 2026 Mohammed Altoyan <mohammedaltoyan@gmail.com>
+# Copyright (c) 2026 WasalX
 # Package 0.5.1 registered the Object Manager metadata with migration flags
 # disabled, leaving new installations without the corresponding ticket columns.
 # This migration repairs existing tenants and is also the final materialization

@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 require_relative 'group_workspace'
-# Copyright (c) 2026 Mohammed Altoyan <mohammedaltoyan@gmail.com>
+# Copyright (c) 2026 WasalX
 
 module Wasalx
   # Only presentation shapes live here; the native workspace retains every action boundary.

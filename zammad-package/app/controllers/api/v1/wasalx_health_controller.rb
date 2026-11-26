@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 class Api::V1::WasalxHealthController < ActionController::API
-# Copyright (c) 2026 Mohammed Altoyan <mohammedaltoyan@gmail.com>
+# Copyright (c) 2026 WasalX
   def show
     response.headers['Cache-Control'] = 'no-store'
     ready = ActiveRecord::Base.connection.select_value('SELECT 1').to_i == 1 &&

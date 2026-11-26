@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-// Copyright (c) 2026 Mohammed Altoyan <mohammedaltoyan@gmail.com>
+// Copyright (c) 2026 WasalX
 import { i18n } from '#shared/i18n/index.ts'
 
 import './accessibility.css'

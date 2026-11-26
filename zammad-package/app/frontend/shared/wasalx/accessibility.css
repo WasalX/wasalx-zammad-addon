@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: AGPL-3.0-only */
-/* Copyright (c) 2026 Mohammed Altoyan <mohammedaltoyan@gmail.com> */
+/* Copyright (c) 2026 WasalX */
 /* Match native roles and attributes, not utility classes; the native build also removes test ID attributes. */
 /* Remove each override in the Zammad bump that carries the upstream theme fix (issue #42). */
 /* Colours are Zammad 7.1.3 theme tokens; fallbacks repeat their values because Tailwind omits unused theme variables. */

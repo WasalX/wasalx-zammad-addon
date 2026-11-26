@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 Zammad::Application.routes.draw do
-# Copyright (c) 2026 Mohammed Altoyan <mohammedaltoyan@gmail.com>
+# Copyright (c) 2026 WasalX
   get '/api/v1/wasalx/health', to: 'api/v1/wasalx_health#show'
   post '/api/v1/wasalx/service/identity', to: 'api/v1/wasalx_service_identities#create'
   get '/api/v1/wasalx/service/readiness', to: 'api/v1/wasalx#service_readiness'
