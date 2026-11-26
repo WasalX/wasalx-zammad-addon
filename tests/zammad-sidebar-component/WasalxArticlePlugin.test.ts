@@ -409,7 +409,7 @@ describe('WasalX template dialog', () => {
       .spyOn(i18n, 't')
       .mockImplementation((message) => translations[message] ?? message)
     const open = async () => {
-      await openWasalxTemplateDialog('42', (state) =>
+      await openWasalxTemplateDialog('42', (state: string) =>
         state === 'DELIVERED' ? 'Delivered' : state,
       )
       return document.querySelector('dialog')!
