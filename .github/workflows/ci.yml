@@ -151,7 +151,7 @@ jobs:
   source-style-report:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-24.04
-    timeout-minutes: 5
+    timeout-minutes: 3
     continue-on-error: true
     steps:
       - *checkout-source
