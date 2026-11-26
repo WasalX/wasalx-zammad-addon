@@ -184,7 +184,6 @@ class Ticket
     end
   end
 
-
   def initialize(**attributes)
     attributes.each { |name, value| public_send("#{name}=", value) if respond_to?("#{name}=") }
   end
@@ -1301,8 +1300,8 @@ class ZammadAgentPanelContractTest < Minitest::Test
     assert_raises(Wasalx::GroupWorkspace::Conflict) { controller.send(:group_workspace_service).group_receipt(**receipt) }
     controller.current_user = FakeUser.new(%w[ticket.agent], 18, %w[4])
     assert_raises(Wasalx::GroupWorkspace::Conflict) do
-      controller.send(:group_workspace_service).group_receipt(**receipt.merge(kind: 'GROUP_LINK',
-                                                                              ticket_number: Ticket.created_records.first.number))
+      link_receipt = receipt.merge(kind: 'GROUP_LINK', ticket_number: Ticket.created_records.first.number)
+      controller.send(:group_workspace_service).group_receipt(**link_receipt)
     end
     assert_equal 1, Ticket.created_records.length
     assert_equal 1, Ticket::Article.created_articles.length
