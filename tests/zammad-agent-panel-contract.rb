@@ -25,6 +25,20 @@ end
 
 module ActionController
   class BadRequest < StandardError; end
+  class Parameters < Hash; end
+end
+
+module ActiveSupport
+  module SecurityUtils
+    class << self
+      attr_accessor :comparisons
+
+      def secure_compare(left, right)
+        self.comparisons += 1
+        left.bytesize == right.bytesize && OpenSSL.fixed_length_secure_compare(left, right)
+      end
+    end
+  end
 end
 
 module Exceptions
@@ -76,6 +90,10 @@ class ApplicationController
     @rendered_status = status
   end
 
+  def head(status)
+    @rendered_status = status
+  end
+
   def __(value)
     value
   end
@@ -83,9 +101,10 @@ end
 
 class Translation
   class << self
-    attr_accessor :synced_locales
+    attr_accessor :synced_locales, :sync_user_id
 
     def sync_locale_from_po(locale)
+      self.sync_user_id = UserInfo.current_user_id
       (@synced_locales ||= []) << locale
     end
 
@@ -745,16 +764,16 @@ class ZammadAgentPanelContractTest < Minitest::Test
     request = Object.new
     request.define_singleton_method(:get?) { get }
     controller.define_singleton_method(:request) { request }
+    input = ActionController::Parameters[
+      request_token: '44000000-0000-4000-8000-000000000004', template_id: '341',
+      template_sha256: 'a' * 64, parameters: ['42']
+    ]
     controller.params = { ticket_id: '42', tenant_id: 'untrusted', connection_id: 'untrusted', group_id: 'untrusted',
-                          input: { request_token: '44000000-0000-4000-8000-000000000004', template_id: '341',
-                                   template_sha256: 'a' * 64, parameters: ['42'] } }
-    controller.params.define_singleton_method(:require) { |key| fetch(key) }
+                          input: input }
     controller
   end
 
   def test_ticket_template_catalog_and_send_use_native_ticket_and_agent
-    previous_secret = ENV['WASALX_SERVICE_JWT_SECRET']
-    ENV['WASALX_SERVICE_JWT_SECRET'] = 'synthetic-template-recovery-secret'
     Ticket.record.wasalx_provider = 'META'
     Ticket.record.wasalx_bot_state = 'HUMAN'
     expected_target = { tenant_id: ENV.fetch('WASALX_TENANT_ID'), ticket_id: 42,
@@ -796,10 +815,9 @@ class ZammadAgentPanelContractTest < Minitest::Test
     assert_equal({ 'delivery' => delivery }, tracker.rendered)
     Ticket.record.wasalx_group_id = 'changed-target'
     assert_raises(Exceptions::Forbidden) { tracker.ticket_templates }
+    assert_equal 3, ActiveSupport::SecurityUtils.comparisons
     assert_equal 3, Wasalx::Client.post_calls.length
     assert_empty Ticket::Article.created_articles
-  ensure
-    ENV['WASALX_SERVICE_JWT_SECRET'] = previous_secret
   end
 
   def test_ticket_templates_require_an_active_human_agent_with_full_ticket_access
@@ -818,6 +836,92 @@ class ZammadAgentPanelContractTest < Minitest::Test
       assert_raises(Exceptions::Forbidden) { controller.ticket_templates }
     end
     assert_empty Wasalx::Client.post_calls
+  end
+
+  def test_ticket_template_catalog_and_send_refuse_ineligible_tickets
+    [%w[WAHA HUMAN], %w[META BOT]].each do |provider, state|
+      Ticket.record.wasalx_provider = provider
+      Ticket.record.wasalx_bot_state = state
+      [true, false].each do |get|
+        assert_raises(ActiveRecord::RecordNotFound) { ticket_template_controller(get: get).ticket_templates }
+      end
+    end
+    assert_empty Wasalx::Client.post_calls
+  end
+
+  def test_ticket_template_send_and_status_refuse_mismatched_or_malformed_scope
+    valid_scope = ticket_template_scope
+    ['0' * valid_scope.length, [], nil].each do |scope|
+      send = ticket_template_controller(get: false)
+      send.params[:input][:scope] = scope
+      assert_raises(Exceptions::Forbidden) { send.ticket_templates }
+
+      status = ticket_template_controller(get: true)
+      status.params.merge!(scope: scope, request_token: status.params[:input][:request_token])
+      assert_raises(Exceptions::Forbidden) { status.ticket_templates }
+    end
+    assert_equal 2, ActiveSupport::SecurityUtils.comparisons
+    assert_empty Wasalx::Client.post_calls
+  end
+
+  def test_ticket_template_send_refuses_invalid_selection_before_forwarding
+    scope = ticket_template_scope
+    controller = ticket_template_controller(get: false)
+    controller.params[:input] = 'invalid'
+    error = assert_raises(ActionController::BadRequest) { controller.ticket_templates }
+    assert_equal 'Invalid template input', error.message
+
+    [
+      [:template_id, 'Invalid template_id', [341, '', '3x', '1' * 33]],
+      [:template_sha256, 'Invalid template_sha256', [[], 'a' * 63, 'G' * 64]],
+      [:parameters, 'Invalid parameters', [nil, '42', ['42'] * 21, ['界' * 1024] * 4]],
+      [:parameters, 'Invalid parameters[0]', [[42], [''], ["\u00a042"], ["4\n2"], ['a' * 1025]]],
+      [:parameters, 'Invalid parameters[1]', [['42', 42]]]
+    ].each do |key, message, values|
+      values.each do |value|
+        controller = ticket_template_controller(get: false)
+        controller.params[:input].merge!(scope: scope, key => value)
+        error = assert_raises(ActionController::BadRequest) { controller.ticket_templates }
+        assert_equal message, error.message
+      end
+    end
+    assert_empty Wasalx::Client.post_calls
+  end
+
+  def test_ticket_template_send_passes_valid_parameter_boundaries
+    scope = ticket_template_scope
+    [[], ['界' * 1024] + ['42'] * 19].each do |parameters|
+      controller = ticket_template_controller(get: false)
+      controller.params[:input].merge!(scope: scope, template_id: '1' * 32, parameters: parameters)
+      Wasalx::Client.post_results = [{ 'state' => 'QUEUED' }]
+      controller.ticket_templates
+      assert_equal parameters, Wasalx::Client.post_calls.last.dig(:payload, :parameters)
+      assert_equal :accepted, controller.rendered_status
+    end
+  end
+
+  def test_ticket_template_send_maps_platform_errors_without_exposing_details
+    scope = ticket_template_scope
+    {
+      400 => :bad_request, 401 => :forbidden, 403 => :forbidden, 404 => :not_found,
+      409 => :conflict, 429 => :service_unavailable, nil => :service_unavailable
+    }.each do |upstream, response|
+      controller = ticket_template_controller(get: false)
+      controller.params[:input][:scope] = scope
+      Wasalx::Client.post_results = [Wasalx::Client::RequestFailed.new('upstream details', http_status: upstream)]
+      controller.ticket_templates
+      assert_equal response, controller.rendered_status
+      assert_nil controller.rendered
+    end
+  end
+
+  def ticket_template_scope
+    Ticket.record.wasalx_provider = 'META'
+    Ticket.record.wasalx_bot_state = 'HUMAN'
+    controller = ticket_template_controller(get: true)
+    controller.params[:recovery] = '1'
+    controller.ticket_templates
+    controller.rendered.fetch(:scope)
   end
 
   def test_reply_preview_forwards_only_a_boolean_restored_draft_signal_without_mutation
@@ -918,6 +1022,24 @@ class ZammadAgentPanelContractTest < Minitest::Test
     assert_equal ['ar'], Translation.synced_locales
   end
 
+  def test_ticket_template_recovery_translation_upgrade_restores_the_acting_user
+    prior = UserInfo.current_user_id
+    UserInfo.current_user_id = 17
+    Translation.synced_locales = []
+
+    load File.join(ROOT, 'zammad-package/db/addon/wasalx',
+                   '202611270001_sync_wasalx_ticket_template_recovery_translation.rb')
+    SyncWasalxTicketTemplateRecoveryTranslation.up
+
+    assert_equal ['ar'], Translation.synced_locales
+    assert_equal 1, Translation.sync_user_id
+    assert_equal 17, UserInfo.current_user_id
+    assert_equal 'أُدرج إرسال سابق في قائمة الانتظار. لم تُرسل تغييراتك.',
+                 Translation.translate('ar', 'An earlier send was already queued. Your changes were not sent.')
+  ensure
+    UserInfo.current_user_id = prior
+  end
+
   def test_shared_not_found_mapping_preserves_other_failure_semantics
     controller = Api::V1::WasalxController.new
     error_class, handler = Api::V1::WasalxController.request_failure_handler
@@ -937,6 +1059,8 @@ class ZammadAgentPanelContractTest < Minitest::Test
 
   def setup
     Wasalx::Client.reset_panel_test!
+    ActiveSupport::SecurityUtils.comparisons = 0
+    ENV['WASALX_SERVICE_JWT_SECRET'] = 'synthetic-template-recovery-secret'
     ENV['WASALX_PORTAL_URL'] = 'https://portal.wasalx.test/'
     ENV['WASALX_TENANT_ID'] = '10000000-0000-4000-8000-000000000001'
     ENV['WASALX_ZAMMAD_INSTANCE_ID'] = '11000000-0000-4000-8000-000000000001'

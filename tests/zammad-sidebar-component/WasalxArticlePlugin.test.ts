@@ -367,23 +367,27 @@ describe('WasalX template dialog', () => {
     const storageKey = `wasalx:ticket-template:${scope}`
     const deliveryId = '45000000-0000-4000-8000-000000000005'
     const submissions: string[] = []
-    let accepted = false
+    let statusLookups = 0
     const fetchTemplate = vi.fn(async (url: string, init: RequestInit) => {
       const query = new URL(url, 'https://example.test').searchParams
       if (query.has('recovery')) return Response.json({ scope })
       if (query.has('request_token')) {
+        statusLookups += 1
         expect(query.get('request_token')).toBe(
           JSON.parse(submissions[0]!).input.request_token,
         )
         if (query.has('delivery_id'))
           expect(query.get('delivery_id')).toBe(deliveryId)
         return Response.json({
-          delivery: accepted ? { id: deliveryId, state: 'DELIVERED' } : null,
+          delivery:
+            submissions.length >= 2
+              ? { id: deliveryId, state: 'DELIVERED' }
+              : null,
         })
       }
       if (init.method === 'POST') {
         submissions.push(String(init.body))
-        accepted = submissions.length >= 2
+        if (submissions.length === 3) return new Response(null, { status: 409 })
         throw new TypeError('simulated lost response')
       }
       return Response.json({
@@ -403,6 +407,8 @@ describe('WasalX template dialog', () => {
     vi.stubGlobal('fetch', fetchTemplate)
     const translations: Record<string, string> = {
       'Send WhatsApp template': 'إرسال قالب واتساب',
+      'An earlier send was already queued. Your changes were not sent.':
+        'أُدرج إرسال سابق في قائمة الانتظار. لم تُرسل تغييراتك.',
       Delivered: 'تم التسليم',
     }
     const translate = vi
@@ -414,35 +420,55 @@ describe('WasalX template dialog', () => {
       )
       return document.querySelector('dialog')!
     }
-    const submit = async (dialog: HTMLDialogElement) => {
+    const submit = (dialog: HTMLDialogElement, value: string) => {
       const select = dialog.querySelector('select')!
-      select.value = '44'
-      select.dispatchEvent(new Event('change'))
+      expect(select.disabled).toBe(false)
+      if (!select.value) {
+        select.value = '44'
+        select.dispatchEvent(new Event('change'))
+        expect(dialog.querySelector('input')?.value).toBe('')
+      }
       const input = dialog.querySelector('input')!
       expect(input.dir).toBe('auto')
-      expect(input.value).toBe('')
-      input.value = 'synthetic order'
+      expect(input.readOnly).toBe(false)
+      input.value = value
       dialog
         .querySelector('form')!
         .dispatchEvent(new Event('submit', { cancelable: true }))
-      await vi.waitFor(() =>
-        expect(dialog.textContent).toContain('Could not confirm'),
-      )
-      expect(input.readOnly).toBe(true)
     }
+    const expectRetry = (dialog: HTMLDialogElement) =>
+      vi.waitFor(() =>
+        expect(dialog.textContent).toContain('You can change the template'),
+      )
+    const tokenAt = (index: number) =>
+      JSON.parse(submissions[index]!).input.request_token
     try {
       let dialog = await open()
       expect(dialog.dir).toBe('rtl')
       expect(dialog.querySelector('h2')?.textContent).toBe('إرسال قالب واتساب')
-      await submit(dialog)
+      submit(dialog, 'synthetic order')
+      await expectRetry(dialog)
       expect(JSON.parse(sessionStorage.getItem(storageKey)!)).toEqual({
         token: JSON.parse(submissions[0]!).input.request_token,
       })
       dialog.remove()
       dialog = await open()
-      expect(dialog.textContent).toContain('Re-enter the same template')
-      await submit(dialog)
-      expect(submissions[1]).toBe(submissions[0])
+      await expectRetry(dialog)
+      submit(dialog, 'corrected order')
+      await expectRetry(dialog)
+      expect(JSON.parse(submissions[1]!).input.parameters).toEqual([
+        'corrected order',
+      ])
+      expect(tokenAt(1)).toBe(tokenAt(0))
+      submit(dialog, 'another correction')
+      await vi.waitFor(() => expect(dialog.querySelector('form')).toBeNull())
+      const receiptStatus = dialog.querySelector('[role="status"]')
+      expect(receiptStatus?.textContent).toContain('تم التسليم')
+      expect(receiptStatus?.textContent).toContain(
+        'أُدرج إرسال سابق في قائمة الانتظار. لم تُرسل تغييراتك.',
+      )
+      expect(statusLookups).toBe(2)
+      expect(tokenAt(2)).toBe(tokenAt(0))
       dialog.remove()
       dialog = await open()
       expect(dialog.querySelector('[role="status"]')?.textContent).toBe(
@@ -465,10 +491,9 @@ describe('WasalX template dialog', () => {
       await vi.waitFor(() =>
         expect(dialog.querySelector('form')).not.toBeNull(),
       )
-      await submit(dialog)
-      expect(JSON.parse(submissions[2]!).input.request_token).not.toBe(
-        JSON.parse(submissions[0]!).input.request_token,
-      )
+      submit(dialog, 'new order')
+      await expectRetry(dialog)
+      expect(tokenAt(3)).not.toBe(tokenAt(0))
     } finally {
       translate.mockRestore()
       sessionStorage.removeItem(storageKey)

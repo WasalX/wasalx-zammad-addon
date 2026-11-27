@@ -140,7 +140,7 @@ class Api::V1::WasalxController < ApplicationController
       return render json: { scope: scope } if request.get? && params[:recovery] == '1'
 
       if request.get? && (params.key?(:request_token) || params.key?(:delivery_id))
-        raise Exceptions::Forbidden, __('Not authorized') unless params[:scope] == scope
+        ensure_template_scope!(params[:scope], scope)
 
         payload[:request_token] = uuid!(params[:request_token], 'template request')
         payload[:delivery_id] = uuid!(params[:delivery_id], 'template delivery') if params.key?(:delivery_id)
@@ -152,13 +152,11 @@ class Api::V1::WasalxController < ApplicationController
       else
         raise ActiveRecord::RecordNotFound unless ticket.wasalx_bot_state == 'HUMAN'
 
-        input = params.require(:input)
-        raise Exceptions::Forbidden, __('Not authorized') unless input[:scope] == scope
+        input = params[:input]
+        raise ActionController::BadRequest, 'Invalid template input' unless input.is_a?(ActionController::Parameters)
 
-        payload.merge!(
-          request_token: uuid!(input[:request_token], 'template request'), template_id: input[:template_id],
-          template_sha256: input[:template_sha256], parameters: input[:parameters]
-        )
+        ensure_template_scope!(input[:scope], scope)
+        payload.merge!(validated_template_selection(input))
         endpoint = '/internal/v1/zammad/ticket-templates/send'
       end
       render json: Wasalx::Client.post(
@@ -377,6 +375,33 @@ class Api::V1::WasalxController < ApplicationController
   end
 
   private
+
+  def ensure_template_scope!(provided, expected)
+    return if provided.is_a?(String) && ActiveSupport::SecurityUtils.secure_compare(provided, expected)
+
+    raise Exceptions::Forbidden, __('Not authorized')
+  end
+
+  def validated_template_selection(input)
+    id, digest, parameters = input.values_at(:template_id, :template_sha256, :parameters)
+    # Match the platform ticket-template send schema before forwarding the request.
+    raise ActionController::BadRequest, 'Invalid template_id' unless id.is_a?(String) && id.match?(/\A[0-9]{1,32}\z/)
+    unless digest.is_a?(String) && digest.match?(/\A[a-f0-9]{64}\z/)
+      raise ActionController::BadRequest, 'Invalid template_sha256'
+    end
+    raise ActionController::BadRequest, 'Invalid parameters' unless parameters.is_a?(Array) && parameters.length <= 20
+
+    parameters.each_with_index do |value, index|
+      next if value.is_a?(String) && value.length.between?(1, 1024) &&
+              !value.match?(/\A\p{Z}|\p{Z}\z|[\p{Cc}\p{Cf}]/)
+
+      raise ActionController::BadRequest, "Invalid parameters[#{index}]"
+    end
+    raise ActionController::BadRequest, 'Invalid parameters' if JSON.generate(parameters).bytesize > 12_000
+
+    { request_token: uuid!(input[:request_token], 'template request'), template_id: id,
+      template_sha256: digest, parameters: parameters }
+  end
 
   def group_workspace_service
     Wasalx::GroupWorkspace.new(actor: current_user)

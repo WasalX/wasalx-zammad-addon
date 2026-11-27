@@ -41,10 +41,16 @@ beside the closed-window message in the public reply composer. On mobile, the
 same action is in the ticket's WasalX operations. Choose an approved template,
 review its body and fill its parameters. Use **Track template delivery** in the
 ticket's WasalX panel to check that send after closing the dialog or reloading
-the tab. If queueing cannot be confirmed and no receipt is available yet,
-re-enter the same template and values to retry the original request. The
-browser keeps only the recovery identifiers. Use **Send another template**
-when the prior send has settled.
+the tab. If queueing cannot be confirmed, you can change the template or its
+values and try again. The retry uses the original request identifier. If that
+request already queued a delivery, the dialog shows its status and tells you
+that your changes were not sent. The browser keeps only the recovery
+identifiers. Use **Send another template** when the prior send has settled.
+
+Template requests hold the Zammad ticket row lock through the platform call
+to keep the authorized ticket target stable. The package HTTP client uses a
+5-second connect timeout and a 15-second timeout per read. These are phase
+timeouts. Native updates to the same ticket wait for the lock to release.
 
 ## Rebuild retained packages
 
