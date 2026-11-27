@@ -72,7 +72,9 @@ const publicWhatsAppReply = computed(() => {
     article.internal === false
   )
 })
-const templateTarget = ref<HTMLElement | null>(null)
+// The button renders into this package-owned item, which is moved into
+// FormKit's current message list. A native re-render may replace that list.
+const templateSlot = document.createElement('li')
 const windowMessageKey = 'wasalxServiceWindowClosed'
 watch(
   [
@@ -100,39 +102,34 @@ watch(
     let targetObserver: MutationObserver | undefined
     onCleanup(() => {
       targetObserver?.disconnect()
-      templateTarget.value = null
+      templateSlot.remove()
       body.store.remove(windowMessageKey)
     })
     if (!canSendTemplate) return
 
     const messageId = body.props.id + '-' + windowMessageKey
-    const findTarget = () => {
-      const parent = document.getElementById(messageId)?.parentElement
-      if (!parent) return
-      templateTarget.value = parent
-      targetObserver?.disconnect()
+    const placeSlot = () => {
+      const list = document.getElementById(messageId)?.parentElement
+      if (list && templateSlot.parentElement !== list) list.append(templateSlot)
     }
-    findTarget()
-    if (templateTarget.value) return
-    // FormKit can render the message after the editor's update has flushed.
-    targetObserver = new MutationObserver(findTarget)
+    placeSlot()
+    // FormKit may render the message late or re-render its list; follow it.
+    targetObserver = new MutationObserver(placeSlot)
     targetObserver.observe(document.body, { childList: true, subtree: true })
   },
   { immediate: true },
 )
 </script>
 <template>
-  <Teleport v-if="templateTarget" :to="templateTarget">
-    <li>
-      <button
-        type="button"
-        class="my-1 min-h-9 rounded-md border border-current px-3 py-1 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2"
-        data-test-id="wasalx-send-template"
-        @click="operations.openTemplatePicker"
-      >
-        {{ $t('Send WhatsApp template') }}
-      </button>
-    </li>
+  <Teleport :to="templateSlot">
+    <button
+      type="button"
+      class="my-1 min-h-9 rounded-md border border-current px-3 py-1 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2"
+      data-test-id="wasalx-send-template"
+      @click="operations.openTemplatePicker"
+    >
+      {{ $t('Send WhatsApp template') }}
+    </button>
   </Teleport>
   <TicketSidebarWrapper
     :key="sidebar"
