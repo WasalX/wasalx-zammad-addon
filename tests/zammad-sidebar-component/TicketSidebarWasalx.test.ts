@@ -1458,6 +1458,53 @@ describe('direct ticket customer-service window', () => {
     expect(messages.querySelector('button')).toBeNull()
   })
 
+  test('keeps the template action through native message-list re-renders', async () => {
+    const { body, message, messages, wrapper } = open(
+      new Date(start - 1).toISOString(),
+    )
+    const action = '[data-test-id="wasalx-send-template"]'
+    const rerender = (list: HTMLUListElement) => {
+      const next = document.createElement('li')
+      next.id = message.id
+      list.append(next)
+      return list
+    }
+    await settle()
+    expect(messages.querySelector(action)).not.toBeNull()
+
+    // Vue clears the list's children when FormKit patches it to new messages.
+    messages.textContent = ''
+    rerender(messages)
+    await settle()
+    expect(messages.querySelector(action)).not.toBeNull()
+
+    // A re-mounted editor replaces the whole list with a new element.
+    const replaced = rerender(document.createElement('ul'))
+    messageLists.push(replaced)
+    messages.replaceWith(replaced)
+    await settle()
+    expect(replaced.querySelector(action)).not.toBeNull()
+    expect(document.querySelectorAll(action)).toHaveLength(1)
+
+    wrapper.unmount()
+    expect(blocker(body)).toBeUndefined()
+    expect(document.querySelectorAll(action)).toHaveLength(0)
+  })
+
+  test('builds the template action without changing the sidebar root', async () => {
+    const { messages, wrapper } = open(new Date(start - 1).toISOString())
+    await settle()
+    // The native sidebar list applies v-show and listeners to one element root;
+    // a Teleport sibling made it a fragment, which v-show and listeners ignore.
+    expect(wrapper.element.nodeType).toBe(Node.ELEMENT_NODE)
+    const trigger = messages.querySelector<HTMLButtonElement>(
+      '[data-test-id="wasalx-send-template"]',
+    )
+    expect(trigger?.type).toBe('button')
+    expect(trigger?.textContent).toBe('Send WhatsApp template')
+    wrapper.unmount()
+  })
+
   test.each([undefined, null, 'not-a-time'])(
     'shows no window and never blocks when the expiry is %s',
     async (expiresAt) => {
