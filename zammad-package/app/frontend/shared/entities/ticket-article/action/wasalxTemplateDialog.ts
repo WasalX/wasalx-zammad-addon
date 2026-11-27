@@ -86,6 +86,9 @@ export async function openWasalxTemplateDialog(
   let storageKey: string
   let recoveryScope: string
   let recovery: Recovery | undefined
+  const retryMessage = i18n.t(
+    'Could not confirm the send. You can change the template or its values and try again.',
+  )
   const refresh = document.createElement('button')
   const another = document.createElement('button')
   for (const button of [refresh, another]) {
@@ -312,18 +315,26 @@ export async function openWasalxTemplateDialog(
           template_sha256: selected.semanticSha256,
           parameters: values,
         })
-        if (!response.ok) throw new Error('Template delivery unavailable')
-        const receipt = (await response.json()) as Receipt
-        if (!uuid.test(receipt.id) || typeof receipt.state !== 'string')
+        if (!response.ok && response.status !== 409)
+          throw new Error('Template delivery unavailable')
+        // A changed selection can only queue under this token if it is unused.
+        // If the earlier send won, show its receipt instead.
+        const receipt = response.ok
+          ? ((await response.json()) as Receipt)
+          : await recover()
+        if (
+          !receipt ||
+          !uuid.test(receipt.id) ||
+          typeof receipt.state !== 'string'
+        )
           throw new Error('Invalid template receipt')
-        save({ token, id: receipt.id })
+        if (response.ok) save({ token, id: receipt.id })
         form.remove()
         showReceipt(receipt)
       } catch {
-        status.textContent = i18n.t(
-          'Could not confirm the send. Retry this same template to check.',
-        )
-        send.disabled = false
+        status.textContent = retryMessage
+        send.disabled = select.disabled = false
+        for (const field of fields) field.readOnly = false
       } finally {
         close.disabled = false
         if (send.isConnected) send.focus()
@@ -331,11 +342,7 @@ export async function openWasalxTemplateDialog(
       }
     })
     form.append(label, body, parameters, send)
-    status.textContent = recovery
-      ? i18n.t(
-          'Re-enter the same template and values to retry the previous send.',
-        )
-      : ''
+    status.textContent = recovery ? retryMessage : ''
     dialog.insertBefore(form, status)
     select.focus()
   }
