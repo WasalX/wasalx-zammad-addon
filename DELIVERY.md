@@ -10,6 +10,10 @@ The `checks` job runs the [source hooks](.pre-commit-config.yaml) for added and 
 
 Run `pre-commit run --files <paths>` to check selected files locally. Use `pre-commit run ruby-format --hook-stage manual --files <paths>` to format Ruby. If package sources change, rebuild the package using the [build commands](AGENTS.md#build-and-checks).
 
+## CI caching and concurrency
+
+The [CI workflow](.github/workflows/ci.yml) restores the pnpm store before installing PR dependencies. A main push saves the store when the exact key is missing. A newer run cancels an older run for the same PR. Main and merge-queue runs have independent concurrency groups.
+
 ## Deviations
 
 | Rule | Reason | Review date |

@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+
 # SPDX-License-Identifier: AGPL-3.0-only
 # Copyright (c) 2026 WasalX
 
@@ -8,6 +9,7 @@ require 'monitor'
 
 class Hash
   def to_query; URI.encode_www_form(self); end
+
   def with_indifferent_access
     transform_keys(&:to_s)
   end
@@ -23,6 +25,20 @@ end
 
 module ActionController
   class BadRequest < StandardError; end
+  class Parameters < Hash; end
+end
+
+module ActiveSupport
+  module SecurityUtils
+    class << self
+      attr_accessor :comparisons
+
+      def secure_compare(left, right)
+        self.comparisons += 1
+        left.bytesize == right.bytesize && OpenSSL.fixed_length_secure_compare(left, right)
+      end
+    end
+  end
 end
 
 module Exceptions
@@ -56,8 +72,8 @@ class ApplicationController
     end
   end
 
-  attr_accessor :params, :current_user, :deny_authorization
-  attr_reader :authorization, :rendered, :rendered_status
+  attr_accessor :params, :deny_authorization
+  attr_reader :current_user, :authorization, :rendered, :rendered_status
 
   def current_user=(actor)
     @current_user = actor
@@ -74,6 +90,10 @@ class ApplicationController
     @rendered_status = status
   end
 
+  def head(status)
+    @rendered_status = status
+  end
+
   def __(value)
     value
   end
@@ -81,9 +101,10 @@ end
 
 class Translation
   class << self
-    attr_accessor :synced_locales
+    attr_accessor :synced_locales, :sync_user_id
 
     def sync_locale_from_po(locale)
+      self.sync_user_id = UserInfo.current_user_id
       (@synced_locales ||= []) << locale
     end
 
@@ -97,6 +118,7 @@ end
 class UserInfo
   def self.current_user_id; Thread.current[:native_test_user_id]; end
   def self.current_user_id=(id); Thread.current[:native_test_user_id] = id; end
+
   def self.with_user_id(id)
     prior = current_user_id
     self.current_user_id = id
@@ -164,7 +186,8 @@ class Ticket
 
   class << self
     attr_accessor :record, :created_records, :workflow_guard
-    def transaction(requires_new: false, &block); Transaction.execute(&block); end
+
+    def transaction(**, &block); Transaction.execute(&block); end
     def connection; self; end
     def execute(_query); end
 
@@ -179,7 +202,6 @@ class Ticket
       [record, *created_records].compact.find { |candidate| candidate.number.to_s == number.to_s }
     end
   end
-
 
   def initialize(**attributes)
     attributes.each { |name, value| public_send("#{name}=", value) if respond_to?("#{name}=") }
@@ -199,6 +221,7 @@ class Ticket
   end
 
   def lock!; self; end
+
   def with_lock
     yield
   end
@@ -214,7 +237,10 @@ class Group
   end
 end
 
-TestStoreItem = Struct.new(:id, :filename, :size, :content, :preferences, :object, :o_id, :created_by_id, :created_at, keyword_init: true) do
+TestStoreItem = Struct.new(:id, :filename, :file_size, :content, :preferences, :object, :o_id, :created_by_id,
+                           :created_at, keyword_init: true) do
+  alias size file_size
+
   def touch
     self
   end
@@ -234,7 +260,7 @@ class Store
 
     def create!(attributes)
       item = TestStoreItem.new(id: @next_id, filename: attributes.fetch(:filename),
-                               size: attributes.fetch(:data).bytesize, content: attributes.fetch(:data),
+                               file_size: attributes.fetch(:data).bytesize, content: attributes.fetch(:data),
                                preferences: attributes.fetch(:preferences), object: attributes.fetch(:object),
                                o_id: attributes.fetch(:o_id), created_by_id: attributes[:created_by_id])
       @next_id += 1
@@ -291,7 +317,7 @@ end
 
 class Ticket::Article
   Scope = Struct.new(:rows) do
-    def order(id:) = self
+    def order(**) = self
     def limit(count) = rows.first(count)
   end
 
@@ -302,11 +328,16 @@ class Ticket::Article
     def find(id) = reply_articles.find { |article| article.id == id } || raise(ActiveRecord::RecordNotFound)
 
     def find_by(wasalx_operation_key: nil, ticket_id: nil, id: nil, message_id: nil)
-      return created_articles.find { |article| article[:wasalx_operation_key] == wasalx_operation_key } if wasalx_operation_key
+      return created_articles.find { |article|
+        article[:wasalx_operation_key] == wasalx_operation_key
+      } if wasalx_operation_key
 
       created = created_articles.find { |article| article.ticket_id == ticket_id && article.id == id } if id
       return created if created
-      reply_articles.find { |article| article.ticket_id == ticket_id && (id ? article.id == id : article.message_id == message_id) }
+
+      reply_articles.find { |article|
+        article.ticket_id == ticket_id && (id ? article.id == id : article.message_id == message_id)
+      }
     end
 
     def find_by!(**values)
@@ -358,7 +389,8 @@ class User
 
   class << self
     attr_accessor :records
-    def transaction(requires_new: false, &block); Transaction.execute(&block); end
+
+    def transaction(**, &block); Transaction.execute(&block); end
 
     def find(id)
       records.fetch(Integer(id))
@@ -396,8 +428,10 @@ end
 
 FakeUser = Struct.new(:permission_names, :id, :group_ids) do
   attr_accessor :denied_policies
+
   def active; true; end
   def login; "native-#{id}"; end
+
   def permissions?(name)
     permission_names.any? { |held| name == held || name.start_with?("#{held}.") }
   end
@@ -450,10 +484,11 @@ class Wasalx::Client
     attr_accessor :test_response, :test_error, :post_results, :get_results, :download_result
     attr_reader :get_calls, :post_calls, :download_calls
 
-    def get(path, scope:, actor: nil)
+    def get(path, scope:, **)
       @get_calls ||= []
       @get_calls << { path: path, scope: scope }
       raise test_error if test_error
+
       if path.start_with?('/internal/v1/zammad/group-workspace/groups?')
         selected = URI.decode_www_form(URI.parse(path).query).to_h.fetch('selected')
         return { 'items' => [{ 'id' => selected }] }
@@ -475,7 +510,8 @@ class Wasalx::Client
 
     def download(url, maximum_bytes, expected_content_type:, expected_sha256:)
       @download_calls ||= []
-      @download_calls << { url: url, maximum_bytes: maximum_bytes, expected_content_type: expected_content_type, expected_sha256: expected_sha256 }
+      @download_calls << { url: url, maximum_bytes: maximum_bytes, expected_content_type: expected_content_type,
+                           expected_sha256: expected_sha256 }
       download_result
     end
 
@@ -525,31 +561,41 @@ class TicketPolicy
   def agent_read_access?; permitted?(:agent_read_access?); end
   def agent_update_access?; permitted?(:agent_update_access?); end
   def create?; permitted?(:create?); end
+
   private
+
   def permitted?(policy)
     @actor.permissions?('ticket.agent') && !Array(@actor.denied_policies).include?(policy)
   end
 end
+
 class WasalxMembership
   def self.find_by(**_values); nil; end
 end
+
 class WasalxTicketOperation
-  Row = Struct.new(:operation_id, :portal_user_id, :native_user_id, :ticket_id, :kind, :request_sha256, :result, keyword_init: true)
+  Row = Struct.new(:operation_id, :portal_user_id, :native_user_id, :ticket_id, :kind, :request_sha256, :result,
+                   keyword_init: true)
   class << self; attr_accessor :records; end
   def self.find_by(operation_id:); records[operation_id]; end
+
   def self.create!(**values)
     raise ActiveRecord::RecordNotUnique if records.key?(values[:operation_id])
+
     values[:result] = JSON.parse(JSON.generate(values[:result]))
     records[values[:operation_id]] = Row.new(**values)
   end
 end
+
 module Wasalx::ServiceIdentity
   def self.digest(value); Digest::SHA256.hexdigest(JSON.generate(value)); end
   def self.automation?(actor); actor.permission_names.include?('wasalx_service'); end
 end
+
 module Wasalx::MembershipAccess
   def self.check!(actor); raise Exceptions::Forbidden unless actor.active; end
 end
+
 module CreatesTicketArticles; end
 load File.join(ROOT, 'zammad-package/app/controllers/api/v1/wasalx_controller.rb')
 load File.join(ROOT, 'zammad-package/app/controllers/api/v1/wasalx_portal_workspace_controller.rb')
@@ -637,20 +683,24 @@ class ZammadAgentPanelContractTest < Minitest::Test
       [prefix + 'x', prefix + 'x']
     ].each do |body, expected|
       Ticket::Article.reply_articles = [article_class.new(id: 8, ticket_id: 42, body: body,
-        content_type: 'text/plain', internal: false, from: 'Agent', sender: Ticket::Article::Sender.lookup(id: 1),
-        type: article_type, preferences: {}, created_at: Time.utc(2026, 1, 1), attachments: [])]
+                                                          content_type: 'text/plain', internal: false, from: 'Agent',
+                                                          sender: Ticket::Article::Sender.lookup(id: 1),
+                                                          type: article_type, preferences: {},
+                                                          created_at: Time.utc(2026, 1, 1), attachments: [])]
       controller.instance_variable_set(:@input, { 'ticket_id' => '42' })
       preview = controller.send(:articles).fetch(:items).fetch(0)
 
       actual = preview.fetch(:body)
-      assert actual == expected, "Expected #{expected.length} codepoints, got #{actual.length} ending in #{actual[-8, 8].inspect}"
+      assert actual == expected,
+             "Expected #{expected.length} codepoints, got #{actual.length} ending in #{actual[-8, 8].inspect}"
       assert_equal body.length, preview.fetch(:total_characters)
       assert_equal expected == body, preview.fetch(:body_complete)
       assert_equal Digest::SHA256.hexdigest(body), preview.fetch(:body_sha256)
       next if preview.fetch(:body_complete)
 
       controller.instance_variable_set(:@input, { 'ticket_id' => '42', 'article_id' => '8',
-        'offset' => actual.length, 'expected_sha256' => preview.fetch(:body_sha256) })
+                                                  'offset' => actual.length,
+                                                  'expected_sha256' => preview.fetch(:body_sha256) })
       remainder = controller.send(:article_content)
       assert body == actual + remainder.fetch(:body), 'Full article must resume from the end of the preview'
     end
@@ -673,10 +723,14 @@ class ZammadAgentPanelContractTest < Minitest::Test
   def test_reply_preview_is_read_only_and_uses_authorized_ticket_metadata
     source = reply_preview_article
     Ticket::Article.reply_articles = [source]
-    controller = reply_preview_controller(in_reply_to: 'wasalx-article:8', tenant_id: 'untrusted', connection_id: 'untrusted', group_id: 'untrusted', agent: { id: '99' })
-    snapshot = Marshal.dump([Ticket.record, Ticket::Article.reply_articles.map(&:to_h), Ticket::Article.created_articles, Store.records, UploadCache.destroyed])
+    controller = reply_preview_controller(in_reply_to: 'wasalx-article:8', tenant_id: 'untrusted',
+                                          connection_id: 'untrusted', group_id: 'untrusted', agent: { id: '99' })
+    snapshot = Marshal.dump([Ticket.record, Ticket::Article.reply_articles.map(&:to_h),
+                             Ticket::Article.created_articles, Store.records, UploadCache.destroyed])
     controller.reply_preview
-    assert_equal snapshot, Marshal.dump([Ticket.record, Ticket::Article.reply_articles.map(&:to_h), Ticket::Article.created_articles, Store.records, UploadCache.destroyed])
+    assert_equal snapshot,
+                 Marshal.dump([Ticket.record, Ticket::Article.reply_articles.map(&:to_h), Ticket::Article.created_articles,
+                               Store.records, UploadCache.destroyed])
     assert_equal [Ticket.record, :agent_update_access?], controller.authorization
     assert_equal 1, Wasalx::Client.post_calls.length
     assert_empty Wasalx::Client.get_calls
@@ -686,7 +740,8 @@ class ZammadAgentPanelContractTest < Minitest::Test
     assert_equal({ user_id: 77, group_ids: [4], group_admin: false }, call[:actor])
     assert_equal({ tenant_id: ENV.fetch('WASALX_TENANT_ID'), connection_id: Ticket.record.wasalx_connection_id,
                    group_id: Ticket.record.wasalx_group_id, ticket_id: 42, body: 'مرحبا', reply_to_article_id: '8',
-                   agent: { id: '77', display_name: 'Agent One' }, has_attachments: false, internal: false }, call[:payload])
+                   agent: { id: '77', display_name: 'Agent One' }, has_attachments: false, internal: false },
+                 call[:payload])
     assert_equal({ 'text' => 'REF123 مرحبا', 'replyToMessageId' => 'provider-8' }, controller.rendered)
     assert_nil controller.rendered_status
   end
@@ -701,6 +756,172 @@ class ZammadAgentPanelContractTest < Minitest::Test
     assert_raises(Exceptions::Forbidden) { controller.reply_preview }
     assert_equal [Ticket.record, :agent_update_access?], controller.authorization
     assert_empty Wasalx::Client.post_calls
+  end
+
+  def ticket_template_controller(get:, actor: FakeUser.new(%w[ticket.agent], 77, [4]))
+    controller = Api::V1::WasalxController.new
+    controller.current_user = actor
+    request = Object.new
+    request.define_singleton_method(:get?) { get }
+    controller.define_singleton_method(:request) { request }
+    input = ActionController::Parameters[
+      request_token: '44000000-0000-4000-8000-000000000004', template_id: '341',
+      template_sha256: 'a' * 64, parameters: ['42']
+    ]
+    controller.params = { ticket_id: '42', tenant_id: 'untrusted', connection_id: 'untrusted', group_id: 'untrusted',
+                          input: input }
+    controller
+  end
+
+  def test_ticket_template_catalog_and_send_use_native_ticket_and_agent
+    Ticket.record.wasalx_provider = 'META'
+    Ticket.record.wasalx_bot_state = 'HUMAN'
+    expected_target = { tenant_id: ENV.fetch('WASALX_TENANT_ID'), ticket_id: 42,
+                        connection_id: Ticket.record.wasalx_connection_id, group_id: Ticket.record.wasalx_group_id }
+    catalog = { 'window' => 'CLOSED', 'templates' => [] }
+    delivery = { 'id' => '45000000-0000-4000-8000-000000000005', 'state' => 'QUEUED' }
+    recovery = ticket_template_controller(get: true)
+    recovery.params[:recovery] = '1'
+    recovery.ticket_templates
+    scope = recovery.rendered.fetch(:scope)
+    assert_match(/\A[a-f0-9]{64}\z/, scope)
+    different_agent = ticket_template_controller(get: true, actor: FakeUser.new(%w[ticket.agent], 78, [4]))
+    different_agent.params[:recovery] = '1'
+    different_agent.ticket_templates
+    refute_equal scope, different_agent.rendered.fetch(:scope)
+    Wasalx::Client.post_results = [catalog, delivery, { 'delivery' => delivery }]
+
+    [[true, 'catalog', :ok, catalog], [false, 'send', :accepted, delivery]].each do |get, path, status, response|
+      controller = ticket_template_controller(get: get)
+      controller.params[:input][:scope] = scope
+      controller.ticket_templates
+      assert_equal [Ticket.record, :agent_update_access?], controller.authorization
+      assert_equal({ path: "/internal/v1/zammad/ticket-templates/#{path}", scope: 'zammad:outbound',
+                     actor: { user_id: 77, group_ids: [4], group_admin: false },
+                     payload: get ? expected_target : expected_target.merge(controller.params[:input].except(:scope)) },
+                   Wasalx::Client.post_calls.last)
+      assert_equal status, controller.rendered_status
+      assert_equal response, controller.rendered
+    end
+    tracker = ticket_template_controller(get: true)
+    token = tracker.params[:input][:request_token]
+    tracker.params.merge!(scope: scope, request_token: token, delivery_id: delivery.fetch('id'))
+    Ticket.record.wasalx_bot_state = 'RESOLVED'
+    tracker.ticket_templates
+    assert_equal({ path: '/internal/v1/zammad/ticket-templates/status', scope: 'zammad:outbound',
+                   actor: { user_id: 77, group_ids: [4], group_admin: false },
+                   payload: expected_target.merge(request_token: token, delivery_id: delivery.fetch('id')) },
+                 Wasalx::Client.post_calls.last)
+    assert_equal({ 'delivery' => delivery }, tracker.rendered)
+    Ticket.record.wasalx_group_id = 'changed-target'
+    assert_raises(Exceptions::Forbidden) { tracker.ticket_templates }
+    assert_equal 3, ActiveSupport::SecurityUtils.comparisons
+    assert_equal 3, Wasalx::Client.post_calls.length
+    assert_empty Ticket::Article.created_articles
+  end
+
+  def test_ticket_templates_require_an_active_human_agent_with_full_ticket_access
+    Ticket.record.wasalx_provider = 'META'
+    Ticket.record.wasalx_bot_state = 'HUMAN'
+    inactive = FakeUser.new(%w[ticket.agent], 81, [4])
+    inactive.define_singleton_method(:active) { false }
+    [true, false].each do |get|
+      rejected = [FakeUser.new([], 78, [4]), FakeUser.new(%w[ticket.agent], 79, [9]),
+                  FakeUser.new(%w[ticket.agent wasalx_service], 80, [4]), inactive]
+      rejected.each do |actor|
+        assert_raises(Exceptions::Forbidden) { ticket_template_controller(get: get, actor: actor).ticket_templates }
+      end
+      controller = ticket_template_controller(get: get)
+      controller.deny_authorization = true
+      assert_raises(Exceptions::Forbidden) { controller.ticket_templates }
+    end
+    assert_empty Wasalx::Client.post_calls
+  end
+
+  def test_ticket_template_catalog_and_send_refuse_ineligible_tickets
+    [%w[WAHA HUMAN], %w[META BOT]].each do |provider, state|
+      Ticket.record.wasalx_provider = provider
+      Ticket.record.wasalx_bot_state = state
+      [true, false].each do |get|
+        assert_raises(ActiveRecord::RecordNotFound) { ticket_template_controller(get: get).ticket_templates }
+      end
+    end
+    assert_empty Wasalx::Client.post_calls
+  end
+
+  def test_ticket_template_send_and_status_refuse_mismatched_or_malformed_scope
+    valid_scope = ticket_template_scope
+    ['0' * valid_scope.length, [], nil].each do |scope|
+      send = ticket_template_controller(get: false)
+      send.params[:input][:scope] = scope
+      assert_raises(Exceptions::Forbidden) { send.ticket_templates }
+
+      status = ticket_template_controller(get: true)
+      status.params.merge!(scope: scope, request_token: status.params[:input][:request_token])
+      assert_raises(Exceptions::Forbidden) { status.ticket_templates }
+    end
+    assert_equal 2, ActiveSupport::SecurityUtils.comparisons
+    assert_empty Wasalx::Client.post_calls
+  end
+
+  def test_ticket_template_send_refuses_invalid_selection_before_forwarding
+    scope = ticket_template_scope
+    controller = ticket_template_controller(get: false)
+    controller.params[:input] = 'invalid'
+    error = assert_raises(ActionController::BadRequest) { controller.ticket_templates }
+    assert_equal 'Invalid template input', error.message
+
+    [
+      [:template_id, 'Invalid template_id', [341, '', '3x', '1' * 33]],
+      [:template_sha256, 'Invalid template_sha256', [[], 'a' * 63, 'G' * 64]],
+      [:parameters, 'Invalid parameters', [nil, '42', ['42'] * 21, ['界' * 1024] * 4]],
+      [:parameters, 'Invalid parameters[0]', [[42], [''], ["\u00a042"], ["4\n2"], ['a' * 1025]]],
+      [:parameters, 'Invalid parameters[1]', [['42', 42]]]
+    ].each do |key, message, values|
+      values.each do |value|
+        controller = ticket_template_controller(get: false)
+        controller.params[:input].merge!(scope: scope, key => value)
+        error = assert_raises(ActionController::BadRequest) { controller.ticket_templates }
+        assert_equal message, error.message
+      end
+    end
+    assert_empty Wasalx::Client.post_calls
+  end
+
+  def test_ticket_template_send_passes_valid_parameter_boundaries
+    scope = ticket_template_scope
+    [[], ['界' * 1024] + ['42'] * 19].each do |parameters|
+      controller = ticket_template_controller(get: false)
+      controller.params[:input].merge!(scope: scope, template_id: '1' * 32, parameters: parameters)
+      Wasalx::Client.post_results = [{ 'state' => 'QUEUED' }]
+      controller.ticket_templates
+      assert_equal parameters, Wasalx::Client.post_calls.last.dig(:payload, :parameters)
+      assert_equal :accepted, controller.rendered_status
+    end
+  end
+
+  def test_ticket_template_send_maps_platform_errors_without_exposing_details
+    scope = ticket_template_scope
+    {
+      400 => :bad_request, 401 => :forbidden, 403 => :forbidden, 404 => :not_found,
+      409 => :conflict, 429 => :service_unavailable, nil => :service_unavailable
+    }.each do |upstream, response|
+      controller = ticket_template_controller(get: false)
+      controller.params[:input][:scope] = scope
+      Wasalx::Client.post_results = [Wasalx::Client::RequestFailed.new('upstream details', http_status: upstream)]
+      controller.ticket_templates
+      assert_equal response, controller.rendered_status
+      assert_nil controller.rendered
+    end
+  end
+
+  def ticket_template_scope
+    Ticket.record.wasalx_provider = 'META'
+    Ticket.record.wasalx_bot_state = 'HUMAN'
+    controller = ticket_template_controller(get: true)
+    controller.params[:recovery] = '1'
+    controller.ticket_templates
+    controller.rendered.fetch(:scope)
   end
 
   def test_reply_preview_forwards_only_a_boolean_restored_draft_signal_without_mutation
@@ -755,7 +976,8 @@ class ZammadAgentPanelContractTest < Minitest::Test
   end
 
   def test_reply_preview_rejects_cross_ticket_private_wrong_type_and_missing_article
-    [{ ticket_id: 99 }, { internal: true }, { internal: nil }, { type_id: 11 }, { sender_id: 3 }, { sender_id: nil }].each do |values|
+    [{ ticket_id: 99 }, { internal: true }, { internal: nil }, { type_id: 11 }, { sender_id: 3 },
+     { sender_id: nil }].each do |values|
       Ticket::Article.reply_articles = [reply_preview_article(**values)]
       assert_raises(ActionController::BadRequest, values.inspect) { reply_preview_controller(in_reply_to: 'wasalx-article:8').reply_preview }
     end
@@ -800,6 +1022,24 @@ class ZammadAgentPanelContractTest < Minitest::Test
     assert_equal ['ar'], Translation.synced_locales
   end
 
+  def test_ticket_template_recovery_translation_upgrade_restores_the_acting_user
+    prior = UserInfo.current_user_id
+    UserInfo.current_user_id = 17
+    Translation.synced_locales = []
+
+    load File.join(ROOT, 'zammad-package/db/addon/wasalx',
+                   '202611270001_sync_wasalx_ticket_template_recovery_translation.rb')
+    SyncWasalxTicketTemplateRecoveryTranslation.up
+
+    assert_equal ['ar'], Translation.synced_locales
+    assert_equal 1, Translation.sync_user_id
+    assert_equal 17, UserInfo.current_user_id
+    assert_equal 'أُدرج إرسال سابق في قائمة الانتظار. لم تُرسل تغييراتك.',
+                 Translation.translate('ar', 'An earlier send was already queued. Your changes were not sent.')
+  ensure
+    UserInfo.current_user_id = prior
+  end
+
   def test_shared_not_found_mapping_preserves_other_failure_semantics
     controller = Api::V1::WasalxController.new
     error_class, handler = Api::V1::WasalxController.request_failure_handler
@@ -819,6 +1059,8 @@ class ZammadAgentPanelContractTest < Minitest::Test
 
   def setup
     Wasalx::Client.reset_panel_test!
+    ActiveSupport::SecurityUtils.comparisons = 0
+    ENV['WASALX_SERVICE_JWT_SECRET'] = 'synthetic-template-recovery-secret'
     ENV['WASALX_PORTAL_URL'] = 'https://portal.wasalx.test/'
     ENV['WASALX_TENANT_ID'] = '10000000-0000-4000-8000-000000000001'
     ENV['WASALX_ZAMMAD_INSTANCE_ID'] = '11000000-0000-4000-8000-000000000001'
@@ -851,8 +1093,11 @@ class ZammadAgentPanelContractTest < Minitest::Test
     request_token = '42000000-0000-4000-8000-000000000002'
     controller = group_send_controller(cache_id, request_token)
     group_id = controller.params[:group_id]
-    item = TestStoreItem.new(id: 27, filename: 'proof.png', size: 4, content: 'data', created_at: Time.now - 3601,
-      preferences: { 'Content-Type' => 'image/png', 'Wasalx-Portal-Target' => { 'kind' => 'GROUP', 'id' => group_id } })
+    item = TestStoreItem.new(id: 27, filename: 'proof.png', file_size: 4, content: 'data', created_at: Time.now - 3601,
+                             preferences: {
+                               'Content-Type' => 'image/png',
+                               'Wasalx-Portal-Target' => { 'kind' => 'GROUP', 'id' => group_id }
+                             })
     UploadCache.seed(cache_id, [item])
     assert_raises(ActionController::BadRequest) { controller.group_workspace_send }
     assert_empty Store.records
@@ -875,8 +1120,8 @@ class ZammadAgentPanelContractTest < Minitest::Test
   def test_group_send_rejects_another_actor_upload_before_staging
     cache_id = '41000000-0000-4000-8000-000000000001'
     request_token = '42000000-0000-4000-8000-000000000002'
-    UploadCache.seed(cache_id, [TestStoreItem.new(id: 27, filename: 'foreign.png', size: 4, content: 'data',
-      created_by_id: 18, preferences: { 'Content-Type' => 'image/png' })])
+    UploadCache.seed(cache_id, [TestStoreItem.new(id: 27, filename: 'foreign.png', file_size: 4, content: 'data',
+                                                  created_by_id: 18, preferences: { 'Content-Type' => 'image/png' })])
     assert_raises(ActionController::BadRequest) { group_send_controller(cache_id, request_token).group_workspace_send }
     assert_empty Store.records
     assert_empty Wasalx::Client.post_calls
@@ -885,7 +1130,7 @@ class ZammadAgentPanelContractTest < Minitest::Test
   def test_attachment_send_reuses_staging_after_a_lost_response
     cache_id = '41000000-0000-4000-8000-000000000001'
     request_token = '42000000-0000-4000-8000-000000000002'
-    UploadCache.seed(cache_id, [TestStoreItem.new(id: 27, filename: 'proof.png', size: 4, content: 'data',
+    UploadCache.seed(cache_id, [TestStoreItem.new(id: 27, filename: 'proof.png', file_size: 4, content: 'data',
                                                   preferences: { 'Content-Type' => 'image/png' })])
     Wasalx::Client.post_results = [
       Wasalx::Client::TemporaryRequestFailed.new('response lost'),
@@ -911,7 +1156,7 @@ class ZammadAgentPanelContractTest < Minitest::Test
   def test_attachment_replay_cleans_only_a_new_unreferenced_stage
     cache_id = '44000000-0000-4000-8000-000000000004'
     request_token = '45000000-0000-4000-8000-000000000005'
-    UploadCache.seed(cache_id, [TestStoreItem.new(id: 28, filename: 'proof.png', size: 4, content: 'data',
+    UploadCache.seed(cache_id, [TestStoreItem.new(id: 28, filename: 'proof.png', file_size: 4, content: 'data',
                                                   preferences: { 'Content-Type' => 'image/png' })])
     Wasalx::Client.post_results = [
       Wasalx::Client::TemporaryRequestFailed.new('response lost'),
@@ -940,7 +1185,8 @@ class ZammadAgentPanelContractTest < Minitest::Test
     }
 
     assert_raises(Exceptions::Forbidden) do
-      controller.send(:group_workspace_service).send(:find_or_create_group_ticket_article, source, '4', 'Operations — shipment')
+      controller.send(:group_workspace_service).send(:find_or_create_group_ticket_article, source, '4',
+                                                     'Operations — shipment')
     end
     assert_nil customer.mobile
     assert_empty Ticket::Article.created_articles
@@ -960,7 +1206,8 @@ class ZammadAgentPanelContractTest < Minitest::Test
     }
 
     customer = controller.send(:group_workspace_service).send(:group_message_customer, source)
-    article = controller.send(:group_workspace_service).send(:create_group_message_article, Ticket.record, source, 'manual-create', customer)
+    article = controller.send(:group_workspace_service).send(:create_group_message_article, Ticket.record, source,
+                                                             'manual-create', customer)
 
     assert_equal '+12025550184', customer.mobile
     assert_equal customer.id, article[:origin_by_id]
@@ -1054,7 +1301,6 @@ class ZammadAgentPanelContractTest < Minitest::Test
     assert_equal 1, Ticket::Article.created_articles.length
   end
 
-
   def test_concurrent_links_from_different_groups_cannot_cross_bind_one_ticket
     User.create!(id: 91, login: 'wasalx-first-group', firstname: 'First', mobile: nil)
     User.create!(id: 92, login: 'wasalx-second-group', firstname: 'Second', mobile: nil)
@@ -1081,8 +1327,8 @@ class ZammadAgentPanelContractTest < Minitest::Test
     end.each(&:join)
 
     outcomes = 2.times.map { results.pop }
-    assert_equal 1, outcomes.count { |outcome| outcome.is_a?(Hash) }
-    assert_equal 1, outcomes.count { |outcome| outcome.is_a?(ActionController::BadRequest) }
+    assert_equal(1, outcomes.count { |outcome| outcome.is_a?(Hash) })
+    assert_equal(1, outcomes.count { |outcome| outcome.is_a?(ActionController::BadRequest) })
     assert_equal 1, Ticket::Article.created_articles.length
     article = Ticket::Article.created_articles.first
     assert_equal Ticket.record.id, article.fetch(:ticket_id)
@@ -1119,8 +1365,10 @@ class ZammadAgentPanelContractTest < Minitest::Test
     assert_equal article.id, attachment.o_id
     assert_equal 'proof.png', attachment.filename
     assert_equal({ 'Mime-Type' => 'image/png' }, attachment.preferences)
-    assert_equal [{ url: 'https://media.example/signed', maximum_bytes: 4, expected_content_type: 'image/png', expected_sha256: Digest::SHA256.hexdigest('data') }], Wasalx::Client.download_calls
-    assert_equal 1, Wasalx::Client.get_calls.count { |call| call[:path].end_with?('/media') }
+    assert_equal [{ url: 'https://media.example/signed', maximum_bytes: 4, expected_content_type: 'image/png',
+                    expected_sha256: Digest::SHA256.hexdigest('data') }],
+                 Wasalx::Client.download_calls
+    assert_equal(1, Wasalx::Client.get_calls.count { |call| call[:path].end_with?('/media') })
   end
 
   def test_group_cancel_fences_a_delayed_create_without_a_fake_ticket
@@ -1129,7 +1377,7 @@ class ZammadAgentPanelContractTest < Minitest::Test
     source = media_source(controller.params[:message_id], 'wamid.cancel').merge('media_available' => false)
     Wasalx::Client.get_results = [source, source, source]
     input = { kind: 'GROUP_CREATE', group_id: controller.params[:group_id], message_id: controller.params[:message_id],
-      request_token: controller.params[:request_token] }
+              request_token: controller.params[:request_token] }
     assert_equal 'UNKNOWN', workspace.group_receipt(**input)['state']
     result = workspace.group_receipt(**input, action: 'CANCEL_IF_UNADMITTED')
     assert_equal 'NOT_APPLIED', result['state']
@@ -1152,8 +1400,9 @@ class ZammadAgentPanelContractTest < Minitest::Test
     assert_equal 'NONE', error.result['effect']
     workspace = controller.send(:group_workspace_service)
     result = workspace.group_receipt(kind: 'GROUP_LINK', group_id: controller.params[:group_id],
-      message_id: controller.params[:message_id], request_token: controller.params[:request_token],
-      ticket_number: controller.params[:ticket_number], action: 'CANCEL_IF_UNADMITTED')
+                                     message_id: controller.params[:message_id],
+                                     request_token: controller.params[:request_token],
+                                     ticket_number: controller.params[:ticket_number], action: 'CANCEL_IF_UNADMITTED')
     assert_equal 'NOT_APPLIED', result['state']
     assert_empty Ticket::Article.created_articles
     assert_empty Wasalx::Client.post_calls
@@ -1168,13 +1417,15 @@ class ZammadAgentPanelContractTest < Minitest::Test
     controller.group_workspace_create_ticket
     controller.params[:title] = 'Changed intent'
     assert_raises(Wasalx::GroupWorkspace::Conflict) { controller.group_workspace_create_ticket }
-    receipt = { kind: 'GROUP_CREATE', group_id: controller.params[:group_id], message_id: controller.params[:message_id],
-      request_token: controller.params[:request_token] }
+    receipt = { kind: 'GROUP_CREATE', group_id: controller.params[:group_id],
+                message_id: controller.params[:message_id],
+                request_token: controller.params[:request_token] }
     controller.current_user = FakeUser.new(%w[ticket.agent], 17, %w[4])
     assert_raises(Wasalx::GroupWorkspace::Conflict) { controller.send(:group_workspace_service).group_receipt(**receipt) }
     controller.current_user = FakeUser.new(%w[ticket.agent], 18, %w[4])
     assert_raises(Wasalx::GroupWorkspace::Conflict) do
-      controller.send(:group_workspace_service).group_receipt(**receipt.merge(kind: 'GROUP_LINK', ticket_number: Ticket.created_records.first.number))
+      link_receipt = receipt.merge(kind: 'GROUP_LINK', ticket_number: Ticket.created_records.first.number)
+      controller.send(:group_workspace_service).group_receipt(**link_receipt)
     end
     assert_equal 1, Ticket.created_records.length
     assert_equal 1, Ticket::Article.created_articles.length
@@ -1189,7 +1440,7 @@ class ZammadAgentPanelContractTest < Minitest::Test
     Wasalx::Client.post_results = [Wasalx::Client::TemporaryRequestFailed.new('lost')]
     assert_raises(Wasalx::Client::TemporaryRequestFailed) { controller.group_workspace_create_ticket }
     input = { kind: 'GROUP_CREATE', group_id: controller.params[:group_id], message_id: controller.params[:message_id],
-      request_token: controller.params[:request_token] }
+              request_token: controller.params[:request_token] }
     workspace = controller.send(:group_workspace_service)
     Wasalx::Client.get_results = [source, source]
     assert_equal 'PARTIAL', workspace.group_receipt(**input)['state']
@@ -1214,7 +1465,8 @@ class ZammadAgentPanelContractTest < Minitest::Test
     article = workspace.send(:find_or_create_group_ticket_article, source, '4', controller.params[:title])
     Wasalx::Client.get_results = [source]
     result = workspace.group_receipt(kind: 'GROUP_CREATE', group_id: controller.params[:group_id],
-      message_id: controller.params[:message_id], request_token: controller.params[:request_token], action: 'CANCEL_IF_UNADMITTED')
+                                     message_id: controller.params[:message_id],
+                                     request_token: controller.params[:request_token], action: 'CANCEL_IF_UNADMITTED')
     assert_equal 'PARTIAL', result['state']
     assert_equal article.id.to_s, result['article_id']
     assert_empty WasalxTicketOperation.records
@@ -1228,7 +1480,8 @@ class ZammadAgentPanelContractTest < Minitest::Test
     Wasalx::Client.get_results = [missing]
     failure = assert_raises(Wasalx::GroupWorkspace::RejectedMissing) { controller.group_workspace_create_ticket }
     assert_equal 'NOT_APPLIED', failure.result['state']
-    input = { kind: 'GROUP_CREATE', group_id: controller.params[:group_id], message_id: controller.params[:message_id], request_token: controller.params[:request_token] }
+    input = { kind: 'GROUP_CREATE', group_id: controller.params[:group_id], message_id: controller.params[:message_id],
+              request_token: controller.params[:request_token] }
     Wasalx::Client.get_results = [RuntimeError.new('Must not fetch retired content')]
     assert_equal 'NOT_APPLIED', workspace.group_receipt(**input)['state']
     assert_equal 'NOT_APPLIED', workspace.repair_ticket_link(**input)['state']
@@ -1246,7 +1499,8 @@ class ZammadAgentPanelContractTest < Minitest::Test
     Wasalx::Client.get_results = [source]
     Wasalx::Client.post_results = [Wasalx::Client::TemporaryRequestFailed.new('lost')]
     assert_raises(Wasalx::Client::TemporaryRequestFailed) { controller.group_workspace_create_ticket }
-    input = { kind: 'GROUP_CREATE', group_id: controller.params[:group_id], message_id: controller.params[:message_id], request_token: controller.params[:request_token] }
+    input = { kind: 'GROUP_CREATE', group_id: controller.params[:group_id], message_id: controller.params[:message_id],
+              request_token: controller.params[:request_token] }
     workspace = controller.send(:group_workspace_service)
     missing = Wasalx::Client::PermanentRequestFailed.new('Source purged', http_status: 404)
     Wasalx::Client.get_results = [missing, missing]
@@ -1264,9 +1518,11 @@ class ZammadAgentPanelContractTest < Minitest::Test
     Wasalx::Client.post_results = [Wasalx::Client::TemporaryRequestFailed.new('lost')]
     assert_raises(Wasalx::Client::TemporaryRequestFailed) { controller.group_workspace_create_ticket }
     article = Ticket::Article.created_articles.first
-    changed = source.merge('links' => [{ 'ticket_id' => article.ticket_id.to_s, 'article_id' => (article.id.to_i + 1).to_s }])
+    changed = source.merge('links' => [{ 'ticket_id' => article.ticket_id.to_s,
+                                         'article_id' => (article.id.to_i + 1).to_s }])
     Wasalx::Client.get_results = [changed, changed]
-    input = { kind: 'GROUP_CREATE', group_id: controller.params[:group_id], message_id: controller.params[:message_id], request_token: controller.params[:request_token] }
+    input = { kind: 'GROUP_CREATE', group_id: controller.params[:group_id], message_id: controller.params[:message_id],
+              request_token: controller.params[:request_token] }
     workspace = controller.send(:group_workspace_service)
     assert_raises(Wasalx::GroupWorkspace::Conflict) { workspace.group_receipt(**input) }
     assert_raises(Wasalx::GroupWorkspace::Conflict) { workspace.repair_ticket_link(**input) }
@@ -1276,7 +1532,7 @@ class ZammadAgentPanelContractTest < Minitest::Test
 
   def test_explicit_legacy_link_binds_unbound_ticket_only_with_native_update_authority
     controller = group_ticket_controller(:link)
-    workspace = controller.send(:group_workspace_service)
+    controller.send(:group_workspace_service)
     source = media_source(controller.params[:message_id], 'wamid.explicit').merge('media_available' => false)
     article = Ticket::Article.create!(ticket_id: Ticket.record.id, wasalx_operation_key: nil, created_by_id: 18)
     source['links'] = [{ 'ticket_id' => article.ticket_id.to_s, 'article_id' => article.id.to_s }]
@@ -1311,7 +1567,8 @@ class ZammadAgentPanelContractTest < Minitest::Test
     assert_equal 1, Wasalx::Client.post_calls.length
     assert_equal 1, Ticket.created_records.length
     article = Ticket::Article.created_articles.first
-    Wasalx::Client.get_results = [source.merge('links' => [{ 'ticket_id' => article.ticket_id.to_s, 'article_id' => article.id.to_s }])]
+    Wasalx::Client.get_results = [source.merge('links' => [{ 'ticket_id' => article.ticket_id.to_s,
+                                                             'article_id' => article.id.to_s }])]
     controller.group_workspace_create_ticket
     assert_equal :ok, controller.rendered_status
     assert_equal article.ticket_id.to_s, controller.rendered[:ticket_id]
@@ -1365,7 +1622,7 @@ class ZammadAgentPanelContractTest < Minitest::Test
     assert_equal 1, Ticket::Article.created_articles.length
     assert_equal 1, Store.records.length
     assert_equal 1, Wasalx::Client.download_calls.length
-    assert_equal 1, Wasalx::Client.get_calls.count { |call| call[:path].end_with?('/media') }
+    assert_equal(1, Wasalx::Client.get_calls.count { |call| call[:path].end_with?('/media') })
     link_calls = Wasalx::Client.post_calls.select { |call| call[:path].end_with?('/tickets') }
     assert_equal 2, link_calls.length
     assert_equal 1, link_calls.map { |call| call.dig(:payload, :idempotency_key) }.uniq.length
@@ -1390,7 +1647,7 @@ class ZammadAgentPanelContractTest < Minitest::Test
     assert_equal 1, Ticket::Article.created_articles.length
     assert_equal 1, Store.records.length
     assert_equal 1, Wasalx::Client.download_calls.length
-    assert_equal 1, Wasalx::Client.get_calls.count { |call| call[:path].end_with?('/media') }
+    assert_equal(1, Wasalx::Client.get_calls.count { |call| call[:path].end_with?('/media') })
     link_calls = Wasalx::Client.post_calls.select { |call| call[:path].end_with?('/tickets') }
     assert_equal 2, link_calls.length
     assert_equal 1, link_calls.map { |call| call.dig(:payload, :idempotency_key) }.uniq.length
@@ -1437,7 +1694,8 @@ class ZammadAgentPanelContractTest < Minitest::Test
     controller = Api::V1::WasalxController.new
     controller.current_user = FakeUser.new(%w[ticket.agent], 18, %w[4])
     error = assert_raises(ActionController::BadRequest) do
-      controller.send(:group_workspace_service).send(:ensure_group_message_actionable!, { 'latest_mutation' => 'REVOKED' })
+      controller.send(:group_workspace_service).send(:ensure_group_message_actionable!,
+                                                     { 'latest_mutation' => 'REVOKED' })
     end
     assert_equal 'Deleted messages cannot be added to a ticket.', error.message
   end
@@ -1475,7 +1733,8 @@ class ZammadAgentPanelContractTest < Minitest::Test
     controller.params = {
       group_id: '52000000-0000-4000-8000-000000000002',
       message_id: action == :create ? '54000000-0000-4000-8000-000000000004' : '55000000-0000-4000-8000-000000000005',
-      request_token: action == :create ? '57000000-0000-4000-8000-000000000007' : '58000000-0000-4000-8000-000000000008',
+      request_token: (action == :create ? '57000000-0000-4000-8000-000000000007' :
+                                          '58000000-0000-4000-8000-000000000008'),
       target_group_id: '4', title: 'Operations — proof', ticket_number: Ticket.record.number
     }
     controller
@@ -1494,7 +1753,8 @@ class ZammadAgentPanelContractTest < Minitest::Test
   end
 
   def media_metadata
-    { 'url' => 'https://media.example/signed', 'filename' => 'proof.png', 'mime_type' => 'image/png', 'byte_size' => 4, 'sha256' => Digest::SHA256.hexdigest('data') }
+    { 'url' => 'https://media.example/signed', 'filename' => 'proof.png', 'mime_type' => 'image/png', 'byte_size' => 4,
+      'sha256' => Digest::SHA256.hexdigest('data') }
   end
 
   def test_panel_uses_truthful_remote_state_and_minimal_local_metadata
@@ -1536,10 +1796,10 @@ class ZammadAgentPanelContractTest < Minitest::Test
     Ticket.record.wasalx_group_id = nil
     article = Struct.new(:id, :preferences, :updated_at)
     Ticket.record.articles = [article.new(19, {
-      'wasalx_email_routing_payload' => {},
-      'wasalx_email_routing_state' => 'APPLIED',
-      'wasalx_email_routing_ack_state' => 'SUCCEEDED'
-    }, Time.utc(2026, 9, 4, 10, 0, 0))]
+                                            'wasalx_email_routing_payload' => {},
+                                            'wasalx_email_routing_state' => 'APPLIED',
+                                            'wasalx_email_routing_ack_state' => 'SUCCEEDED'
+                                          }, Time.utc(2026, 9, 4, 10, 0, 0))]
 
     panel = Service::Ticket::WasalxPanel.new(
       ticket: Ticket.record,
@@ -1558,8 +1818,10 @@ class ZammadAgentPanelContractTest < Minitest::Test
   def test_panel_exposes_every_bounded_linked_message_context
     Wasalx::Client.get_results = [Wasalx::Client.test_response, {
       'items' => [
-        { 'group_id' => '40000000-0000-4000-8000-000000000004', 'message_id' => '50000000-0000-4000-8000-000000000005', 'sender_name' => 'Customer One', 'sender_phone' => '+12025550184', 'from_me' => false },
-        { 'group_id' => '40000000-0000-4000-8000-000000000004', 'message_id' => '50000000-0000-4000-8000-000000000006', 'sender_name' => 'Agent One', 'sender_phone' => '+12025550132', 'from_me' => true }
+        { 'group_id' => '40000000-0000-4000-8000-000000000004', 'message_id' => '50000000-0000-4000-8000-000000000005',
+          'sender_name' => 'Customer One', 'sender_phone' => '+12025550184', 'from_me' => false },
+        { 'group_id' => '40000000-0000-4000-8000-000000000004', 'message_id' => '50000000-0000-4000-8000-000000000006',
+          'sender_name' => 'Agent One', 'sender_phone' => '+12025550132', 'from_me' => true }
       ],
       'truncated' => true
     }]
@@ -1624,8 +1886,14 @@ class ZammadAgentPanelContractTest < Minitest::Test
   def test_local_sender_fallback_ignores_a_newer_agent_article
     article = Struct.new(:preferences, :origin_by_id)
     Ticket.record.articles = [
-      article.new({ 'wasalx_origin' => 'provider', 'wasalx_sender_name' => 'Customer One', 'wasalx_sender_phone' => '+12025550184' }, 91),
-      article.new({ 'wasalx_origin' => 'provider', 'wasalx_sender_name' => 'Agent One', 'wasalx_sender_phone' => '+12025550132' }, nil)
+      article.new(
+        { 'wasalx_origin' => 'provider', 'wasalx_sender_name' => 'Customer One',
+          'wasalx_sender_phone' => '+12025550184' }, 91
+      ),
+      article.new(
+        { 'wasalx_origin' => 'provider', 'wasalx_sender_name' => 'Agent One',
+          'wasalx_sender_phone' => '+12025550132' }, nil
+      )
     ]
     Wasalx::Client.test_error = Wasalx::Client::TemporaryRequestFailed.new('HTTP 503')
 
@@ -1636,7 +1904,6 @@ class ZammadAgentPanelContractTest < Minitest::Test
 
     assert_equal({ sender_name: 'Customer One', sender_phone: '+12025550184', from_me: false }, panel[:trigger_sender])
   end
-
 
   def test_panel_exposes_only_the_exact_retryable_delivery_identity
     Wasalx::Client.test_response['delivery_state'] = 'OUTCOME_UNKNOWN'
@@ -1709,7 +1976,6 @@ class ZammadAgentPanelContractTest < Minitest::Test
     assert_equal 42, controller.rendered.dig(:ticket, :id)
   end
 
-
   def test_retry_controller_scopes_delivery_and_preserves_browser_idempotency
     controller = Api::V1::WasalxController.new
     controller.params = {
@@ -1730,25 +1996,29 @@ class ZammadAgentPanelContractTest < Minitest::Test
     assert_equal({ user_id: 77, group_ids: [4], group_admin: false }, call.fetch(:actor))
     assert_equal '11000000-0000-4000-8000-000000000001', call.dig(:payload, :instance_id)
     assert_equal '30000000-0000-4000-8000-000000000003', call.dig(:payload, :delivery_id)
-    assert_equal 'retry:42:9:30000000-0000-4000-8000-000000000003:40000000-0000-4000-8000-000000000004', call.dig(:payload, :idempotency_key)
+    assert_equal 'retry:42:9:30000000-0000-4000-8000-000000000003:40000000-0000-4000-8000-000000000004',
+                 call.dig(:payload, :idempotency_key)
     assert_equal true, call.dig(:payload, :confirm_outcome_unknown)
   end
 end
 
-
 class ActiveRecord::Migration
   class << self
     attr_accessor :calls, :constraint_present, :fail_add, :constraint_sql
+
     def check_constraint_exists?(_table, name:)
       calls << [:check, name]
       constraint_present
     end
+
     def add_check_constraint(_table, sql, name:)
       calls << [:add, name]
       raise 'Synthetic DDL failure' if fail_add
+
       self.constraint_sql = sql
       self.constraint_present = true
     end
+
     def change_column_null(table, column, nullable)
       calls << [:nullable, table, column, nullable]
     end
@@ -1767,7 +2037,7 @@ class NativeGroupCancellationMigrationContract < Minitest::Test
     ExtendWasalxTicketOperationCancellation.up
     assert_equal [:check, :add, :nullable], ActiveRecord::Migration.calls.map(&:first)
     assert_equal ['CANCELLED_GROUP_CREATE', 'CANCELLED_GROUP_LINK', 'CANCELLED_CREATE_TICKET'],
-      ActiveRecord::Migration.constraint_sql.scan(/'([^']+)'/).flatten
+                 ActiveRecord::Migration.constraint_sql.scan(/'([^']+)'/).flatten
     assert_equal [:nullable, :wasalx_ticket_operations, :ticket_id, true], ActiveRecord::Migration.calls.last
   end
 
@@ -1780,6 +2050,6 @@ class NativeGroupCancellationMigrationContract < Minitest::Test
   def test_failed_constraint_never_relaxes_nullability
     ActiveRecord::Migration.fail_add = true
     assert_raises(RuntimeError) { ExtendWasalxTicketOperationCancellation.up }
-    refute ActiveRecord::Migration.calls.any? { |call| call.first == :nullable }
+    refute(ActiveRecord::Migration.calls.any? { |call| call.first == :nullable })
   end
 end
