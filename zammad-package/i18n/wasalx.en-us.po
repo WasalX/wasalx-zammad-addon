@@ -71,3 +71,6 @@ msgstr "This browser could not save the template request. The template was not s
 
 msgid "Could not confirm the send. You can change the template or its values and try again."
 msgstr "Could not confirm the send. You can change the template or its values and try again."
+
+msgid "An earlier send was already queued. Your changes were not sent."
+msgstr "An earlier send was already queued. Your changes were not sent."

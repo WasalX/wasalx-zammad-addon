@@ -602,7 +602,6 @@ load File.join(ROOT, 'zammad-package/app/controllers/api/v1/wasalx_portal_worksp
 load File.join(ROOT, 'zammad-package/db/addon/wasalx/202608240008_enable_wasalx_modern_desktop_ui.rb')
 load File.join(ROOT, 'zammad-package/db/addon/wasalx/202610050016_sync_wasalx_reply_preview_translations.rb')
 load File.join(ROOT, 'zammad-package/db/addon/wasalx/202610180007_sync_wasalx_attachment_translation.rb')
-load File.join(ROOT, 'zammad-package/db/addon/wasalx/202611240001_sync_wasalx_ticket_template_translations.rb')
 
 module Validations
   class TicketArticleValidator
@@ -850,14 +849,18 @@ class ZammadAgentPanelContractTest < Minitest::Test
     assert_empty Wasalx::Client.post_calls
   end
 
-  def test_ticket_template_send_refuses_mismatched_or_malformed_scope
+  def test_ticket_template_send_and_status_refuse_mismatched_or_malformed_scope
     valid_scope = ticket_template_scope
     ['0' * valid_scope.length, [], nil].each do |scope|
-      controller = ticket_template_controller(get: false)
-      controller.params[:input][:scope] = scope
-      assert_raises(Exceptions::Forbidden) { controller.ticket_templates }
+      send = ticket_template_controller(get: false)
+      send.params[:input][:scope] = scope
+      assert_raises(Exceptions::Forbidden) { send.ticket_templates }
+
+      status = ticket_template_controller(get: true)
+      status.params.merge!(scope: scope, request_token: status.params[:input][:request_token])
+      assert_raises(Exceptions::Forbidden) { status.ticket_templates }
     end
-    assert_equal 1, ActiveSupport::SecurityUtils.comparisons
+    assert_equal 2, ActiveSupport::SecurityUtils.comparisons
     assert_empty Wasalx::Client.post_calls
   end
 
@@ -865,18 +868,22 @@ class ZammadAgentPanelContractTest < Minitest::Test
     scope = ticket_template_scope
     controller = ticket_template_controller(get: false)
     controller.params[:input] = 'invalid'
-    assert_raises(ActionController::BadRequest) { controller.ticket_templates }
+    error = assert_raises(ActionController::BadRequest) { controller.ticket_templates }
+    assert_equal 'Invalid template input', error.message
 
     [
-      { template_id: 341 }, { template_id: '' }, { template_id: '3x' }, { template_id: '1' * 33 },
-      { template_sha256: [] }, { template_sha256: 'a' * 63 }, { template_sha256: 'G' * 64 },
-      { parameters: nil }, { parameters: '42' }, { parameters: [42] }, { parameters: ['42'] * 21 },
-      { parameters: [''] }, { parameters: ["\u00a042"] }, { parameters: ["4\n2"] },
-      { parameters: ['a' * 1025] }, { parameters: ['界' * 1024] * 4 }
-    ].each do |overrides|
-      controller = ticket_template_controller(get: false)
-      controller.params[:input].merge!(scope: scope, **overrides)
-      assert_raises(ActionController::BadRequest, overrides.keys.join(', ')) { controller.ticket_templates }
+      [:template_id, 'Invalid template_id', [341, '', '3x', '1' * 33]],
+      [:template_sha256, 'Invalid template_sha256', [[], 'a' * 63, 'G' * 64]],
+      [:parameters, 'Invalid parameters', [nil, '42', ['42'] * 21, ['界' * 1024] * 4]],
+      [:parameters, 'Invalid parameters[0]', [[42], [''], ["\u00a042"], ["4\n2"], ['a' * 1025]]],
+      [:parameters, 'Invalid parameters[1]', [['42', 42]]]
+    ].each do |key, message, values|
+      values.each do |value|
+        controller = ticket_template_controller(get: false)
+        controller.params[:input].merge!(scope: scope, key => value)
+        error = assert_raises(ActionController::BadRequest) { controller.ticket_templates }
+        assert_equal message, error.message
+      end
     end
     assert_empty Wasalx::Client.post_calls
   end
@@ -1015,16 +1022,20 @@ class ZammadAgentPanelContractTest < Minitest::Test
     assert_equal ['ar'], Translation.synced_locales
   end
 
-  def test_ticket_template_translation_upgrade_restores_the_acting_user
+  def test_ticket_template_recovery_translation_upgrade_restores_the_acting_user
     prior = UserInfo.current_user_id
     UserInfo.current_user_id = 17
     Translation.synced_locales = []
 
-    SyncWasalxTicketTemplateTranslations.up
+    load File.join(ROOT, 'zammad-package/db/addon/wasalx',
+                   '202611270001_sync_wasalx_ticket_template_recovery_translation.rb')
+    SyncWasalxTicketTemplateRecoveryTranslation.up
 
     assert_equal ['ar'], Translation.synced_locales
     assert_equal 1, Translation.sync_user_id
     assert_equal 17, UserInfo.current_user_id
+    assert_equal 'أُدرج إرسال سابق في قائمة الانتظار. لم تُرسل تغييراتك.',
+                 Translation.translate('ar', 'An earlier send was already queued. Your changes were not sent.')
   ensure
     UserInfo.current_user_id = prior
   end

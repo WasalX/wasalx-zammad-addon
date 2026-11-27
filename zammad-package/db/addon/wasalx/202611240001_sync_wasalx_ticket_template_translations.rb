@@ -2,7 +2,8 @@
 
 class SyncWasalxTicketTemplateTranslations
   def self.up
-    UserInfo.with_user_id(1) { Translation.sync_locale_from_po('ar') }
+    UserInfo.current_user_id = 1
+    Translation.sync_locale_from_po('ar')
   end
 
   def self.down; end

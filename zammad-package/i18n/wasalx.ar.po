@@ -656,3 +656,6 @@ msgstr "تعذّر على المتصفح حفظ طلب القالب، ولم ي�
 
 msgid "Could not confirm the send. You can change the template or its values and try again."
 msgstr "تعذّر تأكيد الإرسال. يمكنك تغيير القالب أو قيمه والمحاولة مرة أخرى."
+
+msgid "An earlier send was already queued. Your changes were not sent."
+msgstr "أُدرج إرسال سابق في قائمة الانتظار. لم تُرسل تغييراتك."

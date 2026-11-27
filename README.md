@@ -43,9 +43,9 @@ review its body and fill its parameters. Use **Track template delivery** in the
 ticket's WasalX panel to check that send after closing the dialog or reloading
 the tab. If queueing cannot be confirmed, you can change the template or its
 values and try again. The retry uses the original request identifier. If that
-request already queued a delivery, the dialog shows its status. The browser
-keeps only the recovery identifiers. Use **Send another template** when the
-prior send has settled.
+request already queued a delivery, the dialog shows its status and tells you
+that your changes were not sent. The browser keeps only the recovery
+identifiers. Use **Send another template** when the prior send has settled.
 
 Template requests hold the Zammad ticket row lock through the platform call
 to keep the authorized ticket target stable. The package HTTP client uses a

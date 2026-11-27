@@ -385,16 +385,19 @@ class Api::V1::WasalxController < ApplicationController
   def validated_template_selection(input)
     id, digest, parameters = input.values_at(:template_id, :template_sha256, :parameters)
     # Match the platform ticket-template send schema before forwarding the request.
-    valid = id.is_a?(String) && id.match?(/\A[0-9]{1,32}\z/) &&
-            digest.is_a?(String) && digest.match?(/\A[a-f0-9]{64}\z/) &&
-            parameters.is_a?(Array) && parameters.length <= 20 &&
-            parameters.all? do |value|
-              value.is_a?(String) && value.length.between?(1, 1024) &&
-                !value.match?(/\A\p{Z}|\p{Z}\z|[\p{Cc}\p{Cf}]/)
-            end
-    unless valid && JSON.generate(parameters).bytesize <= 12_000
-      raise ActionController::BadRequest, 'Invalid template selection'
+    raise ActionController::BadRequest, 'Invalid template_id' unless id.is_a?(String) && id.match?(/\A[0-9]{1,32}\z/)
+    unless digest.is_a?(String) && digest.match?(/\A[a-f0-9]{64}\z/)
+      raise ActionController::BadRequest, 'Invalid template_sha256'
     end
+    raise ActionController::BadRequest, 'Invalid parameters' unless parameters.is_a?(Array) && parameters.length <= 20
+
+    parameters.each_with_index do |value, index|
+      next if value.is_a?(String) && value.length.between?(1, 1024) &&
+              !value.match?(/\A\p{Z}|\p{Z}\z|[\p{Cc}\p{Cf}]/)
+
+      raise ActionController::BadRequest, "Invalid parameters[#{index}]"
+    end
+    raise ActionController::BadRequest, 'Invalid parameters' if JSON.generate(parameters).bytesize > 12_000
 
     { request_token: uuid!(input[:request_token], 'template request'), template_id: id,
       template_sha256: digest, parameters: parameters }

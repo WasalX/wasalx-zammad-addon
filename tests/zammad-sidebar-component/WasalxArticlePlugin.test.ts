@@ -407,6 +407,8 @@ describe('WasalX template dialog', () => {
     vi.stubGlobal('fetch', fetchTemplate)
     const translations: Record<string, string> = {
       'Send WhatsApp template': 'إرسال قالب واتساب',
+      'An earlier send was already queued. Your changes were not sent.':
+        'أُدرج إرسال سابق في قائمة الانتظار. لم تُرسل تغييراتك.',
       Delivered: 'تم التسليم',
     }
     const translate = vi
@@ -460,6 +462,11 @@ describe('WasalX template dialog', () => {
       expect(tokenAt(1)).toBe(tokenAt(0))
       submit(dialog, 'another correction')
       await vi.waitFor(() => expect(dialog.querySelector('form')).toBeNull())
+      const receiptStatus = dialog.querySelector('[role="status"]')
+      expect(receiptStatus?.textContent).toContain('تم التسليم')
+      expect(receiptStatus?.textContent).toContain(
+        'أُدرج إرسال سابق في قائمة الانتظار. لم تُرسل تغييراتك.',
+      )
       expect(statusLookups).toBe(2)
       expect(tokenAt(2)).toBe(tokenAt(0))
       dialog.remove()

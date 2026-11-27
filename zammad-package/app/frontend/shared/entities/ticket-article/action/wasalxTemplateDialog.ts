@@ -331,6 +331,13 @@ export async function openWasalxTemplateDialog(
         if (response.ok) save({ token, id: receipt.id })
         form.remove()
         showReceipt(receipt)
+        if (response.status === 409)
+          status.append(
+            document.createElement('br'),
+            i18n.t(
+              'An earlier send was already queued. Your changes were not sent.',
+            ),
+          )
       } catch {
         status.textContent = retryMessage
         send.disabled = select.disabled = false
