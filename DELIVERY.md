@@ -14,8 +14,11 @@ Run `pre-commit run --files <paths>` to check selected files locally. Use `pre-c
 
 The [CI workflow](.github/workflows/ci.yml) restores the pnpm store before installing PR dependencies. A main push saves the store when the exact key is missing. A newer run cancels an older run for the same PR. Main and merge-queue runs have independent concurrency groups.
 
+The [job timing sample](.github/ci-timings.json) uses successful first-attempt PR, main-push, and merge-queue runs on the current CI layout. Each job uses the highest p95 of its applicable events.
+
 ## Deviations
 
 | Rule | Reason | Review date |
 |---|---|---|
+| Engineering standard §4 PR feedback p95 | Run creation to gate result was 259 s at p95 across 77 first-attempt PR runs and 614 s on the current layout (17 runs). In the slowest run, `checks` and `ci-gate` waited 256 s and 287 s for hosted runners. Both dependency caches hit. [Slowest run](https://github.com/WasalX/wasalx-zammad-addon/actions/runs/45861568621) | 2026-12-08 |
 | Engineering standard §4 PR time to mergeable | The 25 November 2026 sample measures job phases. It has incomplete PR trigger coverage, lacks CodeQL completion timestamps, and cannot verify historical ruleset applicability. [Measurement and coverage](https://github.com/WasalX/wasalx-zammad-addon/issues/18#issuecomment-7154796227) | 2026-12-08 |
