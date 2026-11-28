@@ -1,6 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (c) 2026 WasalX
-import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
+import { readFileSync } from 'node:fs'
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  onTestFinished,
+  test,
+  vi,
+} from 'vitest'
 import { createNode, type FormKitNode } from '@formkit/core'
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
 import axe from 'axe-core'
@@ -9,6 +18,7 @@ import TicketInformationWasalx from '../../zammad-package/app/frontend/apps/mobi
 
 import TicketSidebarWasalx from '../../zammad-package/app/frontend/apps/desktop/pages/ticket/components/TicketSidebar/TicketSidebarWasalx/TicketSidebarWasalx.vue'
 import TicketSidebarWrapper from './stubs/TicketSidebarWrapper.vue'
+import { i18n } from './stubs/i18n.ts'
 import type { SidebarForm } from './stubs/sidebar-types.ts'
 
 type DeliveryState = 'FAILED_RETRYABLE' | 'OUTCOME_UNKNOWN' | 'QUEUED' | 'SENT'
@@ -1255,6 +1265,44 @@ describe.each(['desktop', 'mobile'] as const)(
       )
       expect(wrapper.text()).toContain('Human support')
       await expectComponentAccessible(wrapper)
+    })
+    test('renders panel values from the Arabic catalog', async () => {
+      const catalog = readFileSync(
+        `${process.cwd()}/../../zammad-package/i18n/wasalx.ar.po`,
+        'utf8',
+      )
+      const arabic = new Map(
+        Array.from(
+          catalog.matchAll(/^msgid (".*")\nmsgstr (".*")$/gmu),
+          ([, source, target]): [string, string] => [
+            JSON.parse(source),
+            JSON.parse(target),
+          ],
+        ),
+      )
+      const translate = vi
+        .spyOn(i18n, 't')
+        .mockImplementation((message) => arabic.get(message) ?? message)
+      onTestFinished(() => translate.mockRestore())
+      const value = panel()
+      value.delivery.state = 'FAILED_TERMINAL'
+      value.delivery.retry_allowed = false
+      value.connection.last_provider_event_at = null
+      fetchMock.mockResolvedValue(response(value) as Response)
+      const wrapper = open()
+      await flushPromises()
+      const text = wrapper.text()
+      // Ownership, delivery and connection chips, and the activity fallback.
+      for (const source of [
+        'Human support',
+        'Failed',
+        'Connected',
+        'Not observed',
+      ]) {
+        expect(arabic.get(source)).toMatch(/[؀-ۿ]/u)
+        expect(text).toContain(arabic.get(source))
+        expect(text).not.toContain(source)
+      }
     })
     test('requires exact confirmation for outcome-unknown and submits one existing retry contract', async () => {
       fetchMock.mockResolvedValue(
