@@ -29,6 +29,16 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 2
     steps:
+      - name: Require an allowed pull request opener
+        if: github.event_name == 'pull_request'
+        env:
+          PR_OPENER_ALLOWLIST: ${{ vars.PR_OPENER_ALLOWLIST || 'tree-publisher[bot],dependabot[bot]' }}
+        run: |
+          opener=$(jq -r '.pull_request.user.login // empty' "$GITHUB_EVENT_PATH" 2>/dev/null) || opener=
+          if [[ -z "$opener" ]] || ! tr ',[:space:]' '\n' <<< "$PR_OPENER_ALLOWLIST" | grep -Fx -- "$opener" >/dev/null; then
+            echo '::error::PR opener allowlist rule failed.'
+            exit 1
+          fi
       - &checkout-source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -74,6 +84,8 @@ jobs:
           fi
           version=$(ruby -e 'print RUBY_VERSION')
           printf 'version=%s\n' "$version" >> "$GITHUB_OUTPUT"
+      - name: Test the PR opener rule
+        run: node --test tests/ci-pr-opener.test.ts
       - name: Fetch platform test contracts
         run: |
           # The package suite uses platform-owned contract inputs.

@@ -10,6 +10,8 @@ The `checks` job runs the [source hooks](.pre-commit-config.yaml) for added and 
 
 Run `pre-commit run --files <paths>` to check selected files locally. Use `pre-commit run ruby-format --hook-stage manual --files <paths>` to format Ruby. If package sources change, rebuild the package using the [build commands](AGENTS.md#build-and-checks).
 
+The PR run requires an allowed opener in the `checks` job. The repository Actions variable `PR_OPENER_ALLOWLIST` accepts comma- or whitespace-separated logins and defaults to the publishing App and `dependabot[bot]`. The merge-queue run skips the opener check because the PR run covers it.
+
 ## CI caching and concurrency
 
 The [CI workflow](.github/workflows/ci.yml) restores the pnpm store before installing PR dependencies. A main push saves the store when the exact key is missing. A newer run cancels an older run for the same PR. Main and merge-queue runs have independent concurrency groups.
