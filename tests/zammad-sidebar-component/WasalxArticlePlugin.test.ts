@@ -416,7 +416,7 @@ describe('WasalX template dialog', () => {
       .mockImplementation((message) => translations[message] ?? message)
     const open = async () => {
       await openWasalxTemplateDialog('42', (state: string) =>
-        state === 'DELIVERED' ? 'Delivered' : state,
+        i18n.t(state === 'DELIVERED' ? 'Delivered' : state),
       )
       return document.querySelector('dialog')!
     }
