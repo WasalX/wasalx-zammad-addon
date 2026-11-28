@@ -17,6 +17,12 @@ repos:
         entry: pnpm exec stylelint
         language: system
         files: '\.(?:css|vue)$'
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: c60c980e561ed3e73101667fe8365c609d19a438 # v0.15.9
+    hooks:
+      - id: ruff-check
+      - id: ruff-format
+        args: [--check]
   - repo: https://github.com/rubocop/rubocop
     rev: 5711dcb9850c5adb3df9e5142fa9a1ae4e987c3f # v1.82.1
     hooks:

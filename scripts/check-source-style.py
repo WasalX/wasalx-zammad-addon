@@ -12,14 +12,23 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 
-HOOKS = ("prettier", "oxlint", "stylelint", "rubocop")
+HOOKS = ("prettier", "oxlint", "stylelint", "ruff-check", "ruff-format", "rubocop")
 
 
 def run_hooks(*args):
     version = os.environ["PRE_COMMIT_VERSION"]
     return subprocess.run(
-        ["pipx", "run", "--spec", f"pre-commit=={version}", "pre-commit", "run",
-         "--color", "never", *args],
+        [
+            "pipx",
+            "run",
+            "--spec",
+            f"pre-commit=={version}",
+            "pre-commit",
+            "run",
+            "--color",
+            "never",
+            *args,
+        ],
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
@@ -29,11 +38,12 @@ def run_hooks(*args):
 
 def prove_fixtures():
     fixtures = Path("tests/fixtures/source-style")
+    cases = (("good", 0, "Passed"), ("bad", 1, "Failed"))
     # Use the unchanged hook config against copies outside its fixture exclusion.
     with TemporaryDirectory(prefix=".source-style-proof-", dir=".") as directory:
         for hook in HOOKS:
-            for case, exit_code, verdict in (("good", 0, "Passed"), ("bad", 1, "Failed")):
-                source, = (fixtures / hook).glob(f"{case}.*.fixture")
+            for case, exit_code, verdict in cases:
+                (source,) = (fixtures / hook).glob(f"{case}.*.fixture")
                 path = shutil.copy(source, Path(directory) / source.stem)
                 result = run_hooks(hook, "--files", path)
                 print(f"{hook} {case} fixture (exit {result.returncode}):", flush=True)
@@ -41,7 +51,9 @@ def prove_fixtures():
                 if result.returncode != exit_code or not any(
                     line.endswith(f".{verdict}") for line in result.stdout.splitlines()
                 ):
-                    raise SystemExit(f"{hook} {case}: expected {verdict} with exit {exit_code}")
+                    raise SystemExit(
+                        f"{hook} {case}: expected {verdict} with exit {exit_code}"
+                    )
 
 
 def flagged_hooks(path):
@@ -55,15 +67,23 @@ def flagged_hooks(path):
 
 
 def report_existing():
-    exclude = re.compile(subprocess.check_output(
-        ["ruby", "-ryaml", "-e", "print YAML.safe_load_file('.pre-commit-config.yaml').fetch('exclude')"],
-        text=True,
-    ))
+    exclude = re.compile(
+        subprocess.check_output(
+            [
+                "ruby",
+                "-ryaml",
+                "-e",
+                "print YAML.safe_load_file('.pre-commit-config.yaml').fetch('exclude')",
+            ],
+            text=True,
+        )
+    )
     tracked = subprocess.check_output(["git", "ls-files", "-z"]).split(b"\0")
     paths = (os.fsdecode(path) for path in tracked if path)
+    eligible = (path for path in paths if not exclude.search(path))
     counts = Counter()
     with ThreadPoolExecutor(max_workers=4) as workers:
-        for hooks in workers.map(flagged_hooks, (path for path in paths if not exclude.search(path))):
+        for hooks in workers.map(flagged_hooks, eligible):
             counts.update(hooks)
     for hook in HOOKS:
         print(f"{hook}: {counts[hook]} existing files flagged")
