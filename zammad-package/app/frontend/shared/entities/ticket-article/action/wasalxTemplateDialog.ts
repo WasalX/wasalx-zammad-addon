@@ -107,7 +107,7 @@ export async function openWasalxTemplateDialog(
     recovery = value
   }
   const showReceipt = (receipt: Receipt) => {
-    status.textContent = i18n.t(stateLabel(receipt.state))
+    status.textContent = stateLabel(receipt.state)
     refresh.hidden = false
     another.hidden = !settled.has(receipt.state)
   }

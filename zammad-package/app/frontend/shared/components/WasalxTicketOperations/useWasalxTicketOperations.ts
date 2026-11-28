@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (c) 2026 WasalX
 import { computed, onBeforeUnmount, ref, watch, type Ref } from 'vue'
+import { i18n } from '#shared/i18n/index.ts'
 import { useWasalxServiceWindow } from './useWasalxServiceWindow.ts'
 import { openWasalxTemplateDialog } from '../../entities/ticket-article/action/wasalxTemplateDialog.ts'
 
@@ -252,14 +253,15 @@ export function useWasalxTicketOperations(
       RESOLVED: __('Conversation resolved'),
     }
 
-    return value ? labels[value] || __('Unknown') : __('Unknown')
+    // __() only marks the source for extraction; translate at render time.
+    return i18n.t(value ? labels[value] || __('Unknown') : __('Unknown'))
   }
 
   const timestamp = (value?: string | null) => {
-    if (!value) return __('Not observed')
+    if (!value) return i18n.t('Not observed')
     const date = new Date(value)
     return Number.isNaN(date.getTime())
-      ? __('Not observed')
+      ? i18n.t('Not observed')
       : new Intl.DateTimeFormat(document.documentElement.lang || undefined, {
           dateStyle: 'medium',
           timeStyle: 'short',
