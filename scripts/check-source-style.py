@@ -12,14 +12,23 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 
-HOOKS = ("prettier", "oxlint", "stylelint", "rubocop")
+HOOKS = ("prettier", "oxlint", "stylelint", "ruff-check", "ruff-format", "rubocop")
 
 
 def run_hooks(*args):
     version = os.environ["PRE_COMMIT_VERSION"]
     return subprocess.run(
-        ["pipx", "run", "--spec", f"pre-commit=={version}", "pre-commit", "run",
-         "--color", "never", *args],
+        [
+            "pipx",
+            "run",
+            "--spec",
+            f"pre-commit=={version}",
+            "pre-commit",
+            "run",
+            "--color",
+            "never",
+            *args,
+        ],
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
@@ -33,7 +42,7 @@ def prove_fixtures():
     with TemporaryDirectory(prefix=".source-style-proof-", dir=".") as directory:
         for hook in HOOKS:
             for case, exit_code, verdict in (("good", 0, "Passed"), ("bad", 1, "Failed")):
-                source, = (fixtures / hook).glob(f"{case}.*.fixture")
+                (source,) = (fixtures / hook).glob(f"{case}.*.fixture")
                 path = shutil.copy(source, Path(directory) / source.stem)
                 result = run_hooks(hook, "--files", path)
                 print(f"{hook} {case} fixture (exit {result.returncode}):", flush=True)
@@ -55,10 +64,17 @@ def flagged_hooks(path):
 
 
 def report_existing():
-    exclude = re.compile(subprocess.check_output(
-        ["ruby", "-ryaml", "-e", "print YAML.safe_load_file('.pre-commit-config.yaml').fetch('exclude')"],
-        text=True,
-    ))
+    exclude = re.compile(
+        subprocess.check_output(
+            [
+                "ruby",
+                "-ryaml",
+                "-e",
+                "print YAML.safe_load_file('.pre-commit-config.yaml').fetch('exclude')",
+            ],
+            text=True,
+        )
+    )
     tracked = subprocess.check_output(["git", "ls-files", "-z"]).split(b"\0")
     paths = (os.fsdecode(path) for path in tracked if path)
     counts = Counter()
